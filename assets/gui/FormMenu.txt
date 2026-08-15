@@ -1,0 +1,89 @@
+Renderer.1 {
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BackgroundColorDown = #EBEBEB;
+    BackgroundColorHover = white;
+    BorderColor = #3C3C3C;
+    BorderColorDisabled = #7D7D7D;
+    BorderColorDown = black;
+    BorderColorFocused = #1E1EB4;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextColorDown = black;
+    TextColorHover = black;
+    Texture = None;
+    TextureDisabled = None;
+    TextureDown = None;
+    TextureDownFocused = None;
+    TextureDownHover = None;
+    TextureFocused = None;
+    TextureHover = None;
+}
+
+VerticalLayout.LayoutButons {
+    Position = (25%, 40%);
+    Ratios = [1, 1, 1, 1, 1, 1];
+    Size = (50%, 50%);
+
+    Renderer {
+    }
+
+    Button.ButtonSaveFiles {
+        Renderer = &1;
+        Size = (400, 50);
+        Text = "Save Files";
+        TextSize = 13;
+    }
+
+    Button.ButtonCampaign {
+        Position = (0, 50);
+        Renderer = &1;
+        Size = (400, 50);
+        Text = Campaign;
+        TextSize = 13;
+    }
+
+    Button.ButtonScenarioMaker {
+        Position = (0, 100);
+        Renderer = &1;
+        Size = (400, 50);
+        Text = "Scenario Maker";
+        TextSize = 13;
+    }
+
+    Button.ButtonSettings {
+        Position = (0, 150);
+        Renderer = &1;
+        Size = (400, 50);
+        Text = Settings;
+        TextSize = 13;
+    }
+
+    Button.ButtonAbout {
+        Position = (0, 200);
+        Renderer = &1;
+        Size = (400, 50);
+        Text = About;
+        TextSize = 13;
+    }
+	
+    Button.ButtonExitGame {
+        Position = (0, 250);
+        Renderer = &1;
+        Size = (400, 50);
+        Text = Exit;
+        TextSize = 13;
+    }
+}
+
+Picture.PictureLogo {
+    Position = (25%, 3.33%);
+    Size = (50%, 35%);
+
+    Renderer {
+        Texture = "resources/mine/godofdeath.png" Smooth;
+        TransparentTexture = false;
+    }
+}

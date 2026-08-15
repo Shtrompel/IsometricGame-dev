@@ -1,0 +1,3 @@
+/home/igalblech/Projects/VisualCode/IsometricGame/build/CMakeFiles/SFML_TGUI_Game.dir
+/home/igalblech/Projects/VisualCode/IsometricGame/build/CMakeFiles/edit_cache.dir
+/home/igalblech/Projects/VisualCode/IsometricGame/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,23 @@
+{
+    "resources": [{
+            "id": 0,
+            "name": "ore",
+            "weight": 3
+        }, {
+            "id": 1,
+            "name": "gems",
+            "weight": 5
+        }, {
+            "id": 2,
+            "name": "bodies",
+            "weight": 20
+        }, {
+            "id": 4,
+            "name": "wood",
+            "weight": 2
+        }, {
+            "name": "diamonds",
+            "weight": 15
+        }
+    ]
+}

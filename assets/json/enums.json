@@ -1,0 +1,215 @@
+{
+"serializables":
+{
+	"SERIALIZABLE_NONE":  0,
+	"SERIALIZABLE_NETWORK":  1,
+	"SERIALIZABLE_BUILD_BODY":  2,
+	"SERIALIZABLE_BUILD_BASE":  3,
+	"SERIALIZABLE_PATH":  4,
+	"SERIALIZABLE_ENTITY":  5,
+	"SERIALIZABLE_CITIZEN":  6,
+	"SERIALIZABLE_ENEMY":  7,
+	"SERIALIZABLE_CHUNKS":  8,
+	"SERIALIZABLE_DATA":  9,
+	"SERIALIZABLE_CONSTRUCTION":  10,
+	"SERIALIZABLE_RENDERER":  11,
+	"SERIALIZABLE_BULLET":  12,
+	"SERIALIZABLE_ALL":  13
+},
+"enums": [{
+        "id": 0,
+        "title": "NoneEnum",
+        "values": [
+            "None"
+        ]
+    }, {
+        "id": 1,
+        "title": "BodyType",
+        "values": [
+            "None",
+            "ALL",
+            "BUILDING",
+            "ENTITY",
+            "BULLET"
+        ]
+    }, {
+        "id": 2,
+        "title": "EntityType",
+        "values": [
+            "None",
+            "CITIZEN",
+            "ENEMY"
+        ]
+    }, {
+        "id": 3,
+        "title": "EnemyType",
+        "values": [
+            "NONE",
+            "BRUTE",
+            "HUNTER"
+        ]
+    }, {
+        "id": 4,
+        "title": "CitizenJob",
+        "values": [
+            "NONE",
+            "BUILDER",
+			"COURIER",
+            "MINER",
+            "GATHERER",
+            "ELECTRICIAN",
+            "MAKRKSMAN",
+            "SOLDIER",
+			"RANGER",
+			"TANK",
+            "HERO",
+            "MECHA_BOT",
+			"TEST01",
+			"TOWER_WATCHER"
+        ]
+    }, {
+        "id": 5,
+        "title": "BuildingType",
+        "values": [
+            "EMPTY",
+            "ROAD",
+            "WALL",
+            "HOME",
+            "STORAGE",
+			"LOGISTICS_CENTER",
+            "GENERATOR",
+            "CAPACITOR",
+            "MINE",
+            "MINERS_POST",
+            "TOWER",
+            "ARMORY",
+            "TEMPLE",
+            "GRAVEYARD",
+            "BOMB",
+            "CONSTRUCTION",
+            "CONSTRUCTION_DEPARTMENT",
+            "BUILDERS_GUILD",
+            "RAW_ORE",
+            "RAW_GEMS",
+            "RAW_BODIES",
+            "RAW_VARIOUS",
+            "PILE_ORE",
+            "PILE_GEMS",
+            "PILE_BODIES",
+            "PILE_VARIOUS",
+            "ENEMY_SPAWN"
+        ]
+    }, {
+        "id": 6,
+        "title": "PropertyBool",
+        "values": [
+            "NONE",
+            "BARRIER",
+            "HOME",
+            "HARVESTABLE",
+            "STORAGE",
+			"TMP_STORAGE",
+			"ANY_STORAGE",
+            "INSIDE",
+            "WORKPLACE",
+            "POWER_NETWORK",
+            "HIDDEN",
+            "UNREMOVABLE",
+            "UNFRIENDLY",
+            "FRIENDLY",
+            "HITABBLE",
+			"OFFENSIVE"
+        ]
+    }, {
+        "id": 7,
+        "title": "PropertyNum",
+        "values": [
+            "NONE",
+            "SPEED_BONUS",
+            "DECAY_AMOUNT",
+            "STORAGE_FRAMES",
+            "POWER_FRAMES",
+			"ENTITY_FRAMES",
+            "ACTION_TIME",
+            "WORK_EFFICIENCY",
+            "PATH_WEIGHT_MULT"
+        ]
+    }, {
+        "id": 8,
+        "title": "IngameProperties",
+        "values": [
+            "NONE",
+            "NEEDS_WORKERS"
+        ]
+    }, {
+        "id": 9,
+        "title": "Alignment",
+        "values": [
+            "NONE",
+            "NEUTRAL",
+            "FRIENDLY",
+            "ENEMY"
+        ]
+    },
+    {
+        "id": 10,
+        "title": "EntityPropertyBool",
+        "values": [
+            "NONE",
+            "CAN_PHASE",
+            "IGNORE_ENTITIES",
+            "IGNORE_BUILDINGS",
+			"MELEE",
+			"RANGED"
+        ]
+    }, 
+	{
+        "id": 11,
+        "title": "EntityPropertyNum",
+        "values": [
+            "NONE",
+            "PATH_WEIGHT_BASE",
+            "PATH_WEIGHT_SUB",
+            "PATH_COUNT"
+        ]
+    },
+	{
+        "id": 12,
+        "title": "BulletType",
+        "values": [
+            "NONE",
+			"DEFAULT",
+			"ENEMY_BULLET_01"
+        ]
+    },
+	{
+        "id": 13,
+        "title": "BulletPropertyBool",
+        "values": [
+            "NONE",
+			"HOMING",
+			"BOUNCING",
+			"DESTRUCTIVE",
+			"SPECTRAL"
+        ]
+    }, 
+	{
+        "id": 14,
+        "title": "BulletPropertyNum",
+        "values": [
+			"NONE"
+        ]
+    }, 
+	{
+        "id": 15,
+        "title": "BuildingVisualType",
+        "values": [
+			"NONE",
+			"BUILT",
+			"UNFUNCTIONAL",
+			"DESTROYED"
+        ]
+    }
+	
+]
+}

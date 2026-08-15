@@ -1,0 +1,917 @@
+Renderer.1 {
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BackgroundColorDown = #EBEBEB;
+    BackgroundColorHover = white;
+    BorderColor = #3C3C3C;
+    BorderColorDisabled = #7D7D7D;
+    BorderColorDown = black;
+    BorderColorFocused = #1E1EB4;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextColorDown = black;
+    TextColorHover = black;
+    Texture = None;
+    TextureDisabled = None;
+    TextureDown = None;
+    TextureDownFocused = None;
+    TextureDownHover = None;
+    TextureFocused = None;
+    TextureHover = None;
+}
+
+Renderer.2 {
+    BackgroundColor = rgb(230, 230, 230);
+    BorderColor = White;
+    TextureBackground = None;
+}
+
+Renderer.3 {
+}
+
+Renderer.4 {
+    BackgroundColor = transparent;
+    BorderColor = #3C3C3C;
+    Borders = (0, 0, 0, 0);
+    TextColor = #3C3C3C;
+    TextureBackground = None;
+
+    Scrollbar {
+        ArrowBackgroundColor = #F5F5F5;
+        ArrowBackgroundColorHover = white;
+        ArrowColor = #3C3C3C;
+        ArrowColorHover = black;
+        TextureArrowDown = None;
+        TextureArrowDownHover = None;
+        TextureArrowUp = None;
+        TextureArrowUpHover = None;
+        TextureThumb = None;
+        TextureThumbHover = None;
+        TextureTrack = None;
+        TextureTrackHover = None;
+        ThumbColor = #DCDCDC;
+        ThumbColorHover = #E6E6E6;
+        TrackColor = #F5F5F5;
+    }
+}
+
+Renderer.5 {
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BackgroundColorDown = #EBEBEB;
+    BackgroundColorHover = white;
+    BorderColor = #3C3C3C;
+    BorderColorDisabled = #7D7D7D;
+    BorderColorDown = black;
+    BorderColorFocused = #1E1EB4;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextColorDown = black;
+    TextColorHover = black;
+    Texture = None;
+    TextureDisabled = None;
+    TextureDown = None;
+    TextureDownFocused = None;
+    TextureDownHover = None;
+    TextureFocused = None;
+    TextureHover = None;
+}
+
+Renderer.6 {
+    BackgroundColor = #E6E6E6;
+    BorderBelowTitleBar = 1;
+    BorderColor = black;
+    Borders = (1, 1, 1, 1);
+    DistanceToSide = 3;
+    PaddingBetweenButtons = 1;
+    ShowTextOnTitleButtons = true;
+    TextureBackground = None;
+    TextureTitleBar = None;
+    TitleBarColor = white;
+    TitleColor = #3C3C3C;
+
+    CloseButton {
+        BackgroundColor = #F5F5F5;
+        BackgroundColorDisabled = #E6E6E6;
+        BackgroundColorDown = #EBEBEB;
+        BackgroundColorHover = white;
+        BorderColor = #3C3C3C;
+        BorderColorDisabled = #7D7D7D;
+        BorderColorDown = black;
+        BorderColorFocused = #1E1EB4;
+        BorderColorHover = black;
+        Borders = (1, 1, 1, 1);
+        TextColor = #3C3C3C;
+        TextColorDisabled = #7D7D7D;
+        TextColorDown = black;
+        TextColorHover = black;
+        Texture = None;
+        TextureDisabled = None;
+        TextureDown = None;
+        TextureDownFocused = None;
+        TextureDownHover = None;
+        TextureFocused = None;
+        TextureHover = None;
+    }
+
+    MaximizeButton {
+        BackgroundColor = #F5F5F5;
+        BackgroundColorDown = #EBEBEB;
+        BackgroundColorHover = white;
+        BorderColor = #3C3C3C;
+        BorderColorDown = black;
+        BorderColorHover = black;
+        Borders = (1, 1, 1, 1);
+        TextColor = #3C3C3C;
+        TextColorDown = black;
+        TextColorHover = black;
+        Texture = None;
+        TextureDisabled = None;
+        TextureDown = None;
+        TextureDownFocused = None;
+        TextureDownHover = None;
+        TextureFocused = None;
+        TextureHover = None;
+    }
+
+    MinimizeButton {
+        BackgroundColor = #F5F5F5;
+        BackgroundColorDown = #EBEBEB;
+        BackgroundColorHover = white;
+        BorderColor = #3C3C3C;
+        BorderColorDown = black;
+        BorderColorHover = black;
+        Borders = (1, 1, 1, 1);
+        TextColor = #3C3C3C;
+        TextColorDown = black;
+        TextColorHover = black;
+        Texture = None;
+        TextureDisabled = None;
+        TextureDown = None;
+        TextureDownFocused = None;
+        TextureDownHover = None;
+        TextureFocused = None;
+        TextureHover = None;
+    }
+}
+
+Renderer.7 {
+}
+
+Renderer.8 {
+    BackgroundColor = white;
+    BorderColor = black;
+    TextureBackground = None;
+
+    Scrollbar {
+        ArrowBackgroundColor = #F5F5F5;
+        ArrowBackgroundColorHover = white;
+        ArrowColor = #3C3C3C;
+        ArrowColorHover = black;
+        TextureArrowDown = None;
+        TextureArrowDownHover = None;
+        TextureArrowUp = None;
+        TextureArrowUpHover = None;
+        TextureThumb = None;
+        TextureThumbHover = None;
+        TextureTrack = None;
+        TextureTrackHover = None;
+        ThumbColor = #DCDCDC;
+        ThumbColorHover = #E6E6E6;
+        TrackColor = #F5F5F5;
+    }
+}
+
+Renderer.9 {
+}
+
+Button.ButtonMenu {
+    Position = (1.5%, 1.5%);
+    Renderer = &1;
+    Size = (12.5%, 10%);
+    Text = Menu;
+    TextSize = 13;
+    UserData = GroupMainCore;
+}
+
+Panel.PanelResources {
+    Position = (20%, 1.5%);
+    Renderer = &2;
+    Size = (77.5%, 9%);
+    UserData = GroupMainCore;
+
+    HorizontalLayout.LayoutResources {
+        Ratios = [1, 1, 1, 1, 1];
+        Renderer = &3;
+        Size = (100%, 100%);
+
+        HorizontalLayout.LayourResElctr {
+            Ratios = [1, 1];
+            Renderer = &3;
+            Size = (124, 54);
+
+            Picture.PictureResElctr {
+                Size = (62, 54);
+
+                Renderer {
+                    Texture = "resources/mine/img_res_electricity.png" NoSmooth;
+                    TransparentTexture = false;
+                }
+            }
+
+            Label.LabelResElctr {
+                HorizontalAlignment = Center;
+                Position = (62, 0);
+                Renderer = &4;
+                ScrollbarPolicy = Automatic;
+                Size = (62, 54);
+                TextSize = 20;
+                VerticalAlignment = Center;
+            }
+        }
+
+        HorizontalLayout.HorizontalResPpl {
+            Position = (124, 0);
+            Ratios = [1, 1];
+            Renderer = &3;
+            Size = (124, 54);
+
+            Picture.PictureResPpl {
+                Size = (62, 54);
+
+                Renderer {
+                    Texture = "resources/mine/img_res_population.png" NoSmooth;
+                    TransparentTexture = false;
+                }
+            }
+
+            Label.LabelResPpl {
+                HorizontalAlignment = Center;
+                Position = (62, 0);
+                Renderer = &4;
+                ScrollbarPolicy = Automatic;
+                Size = (62, 54);
+                TextSize = 20;
+                VerticalAlignment = Center;
+            }
+        }
+
+        HorizontalLayout.HorizontalResOre {
+            Position = (248, 0);
+            Ratios = [1, 1];
+            Renderer = &3;
+            Size = (124, 54);
+
+            Picture.PictureResOre {
+                Size = (62, 54);
+
+                Renderer {
+                    Texture = "resources/mine/img_res_ore.png" Smooth;
+                    TransparentTexture = false;
+                }
+            }
+
+            Label.LabelResOre {
+                HorizontalAlignment = Center;
+                Position = (62, 0);
+                Renderer = &4;
+                ScrollbarPolicy = Automatic;
+                Size = (62, 54);
+                TextSize = 20;
+                VerticalAlignment = Center;
+            }
+        }
+
+        HorizontalLayout.HorizontalResGem {
+            Position = (372, 0);
+            Ratios = [1, 1];
+            Renderer = &3;
+            Size = (124, 54);
+
+            Picture.PictureResGem {
+                Size = (62, 54);
+
+                Renderer {
+                    Texture = "resources/mine/img_res_gems.png" Smooth;
+                    TransparentTexture = false;
+                }
+            }
+
+            Label.LabelResGem {
+                HorizontalAlignment = Center;
+                Position = (62, 0);
+                Renderer = &4;
+                ScrollbarPolicy = Automatic;
+                Size = (62, 54);
+                TextSize = 20;
+                VerticalAlignment = Center;
+            }
+        }
+
+        HorizontalLayout.HorizontalResBodies {
+            Position = (496, 0);
+            Ratios = [1, 1];
+            Renderer = &3;
+            Size = (124, 54);
+
+            Picture.PictureResBodies {
+                Size = (62, 54);
+
+                Renderer {
+                    Texture = "resources/mine/img_res_bodies.png" Smooth;
+                    TransparentTexture = false;
+                }
+            }
+
+            Label.LabelResBodies {
+                HorizontalAlignment = Center;
+                Position = (62, 0);
+                Renderer = &4;
+                ScrollbarPolicy = Automatic;
+                Size = (62, 54);
+                TextSize = 20;
+                VerticalAlignment = Center;
+            }
+        }
+    }
+}
+
+BitmapButton.ButtonUpgrade {
+    Image = "resources/mine/img_upgrade.png" Middle(128, 128, 256, 256) NoSmooth;
+    ImageScaling = 1;
+    Position = (84%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupMain;
+}
+
+BitmapButton.ButtonRotate {
+    Image = "resources/mine/img_rotate.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (1.5%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupMainCore;
+}
+
+BitmapButton.ButtonRemove {
+    Image = "resources/mine/img_remove.png" Middle(128, 128, 256, 256) NoSmooth;
+    ImageScaling = 1;
+    Position = (67.75%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupMain;
+}
+
+BitmapButton.ButtonBuild {
+    Image = "resources/mine/img_build.png" Middle(128, 128, 256, 256) NoSmooth;
+    ImageScaling = 1;
+    Position = (51.5%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupMain;
+}
+
+BitmapButton.ButtonPaint {
+    Image = "resources/mine/img_brush.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (84%, 66.83%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupBuild;
+    Visible = false;
+}
+
+BitmapButton.ButtonAdd {
+    Image = "resources/mine/img_choose.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (84%, 50.17%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupBuild;
+    Visible = false;
+}
+
+BitmapButton.ButtonBuildCancel {
+    Image = "resources/mine/img_cancel.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (84%, 33.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupBuild;
+    Visible = false;
+}
+
+BitmapButton.ButtonGridApply {
+    Image = "resources/mine/img_check.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (51.5%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupGridBuild;
+    Visible = false;
+}
+
+BitmapButton.ButtonGridCancel {
+    Image = "resources/mine/img_trash.png" NoSmooth;
+    ImageScaling = 1;
+    Position = (67.75%, 83.5%);
+    Renderer = &5;
+    Size = (15%, 15%);
+    TextSize = 13;
+    UserData = GroupGridBuild;
+    Visible = false;
+}
+
+Label.LabelFramerate {
+    HorizontalAlignment = Center;
+    Position = (12, 430);
+    Renderer = &4;
+    ScrollbarPolicy = Automatic;
+    Size = (292, 54);
+    Text = Label;
+    TextSize = 20;
+    VerticalAlignment = Center;
+}
+
+ChildWindow.WindowMenu {
+    CloseBehavior = Remove;
+    Position = (200, 80);
+    Renderer = &6;
+    Resizable = true;
+    Size = (50%, 400);
+    TitleAlignment = Center;
+    TitleButtons = Close;
+    TitleTextSize = 13;
+
+    VerticalLayout.LayoutMenu {
+        Ratios = [1, 1, 1, 1];
+        Renderer = &7;
+        Size = (100%, 100%);
+
+        Button.ButtonContinue {
+            Renderer = &1;
+            Size = (398, 94.25);
+            Text = Continue;
+            TextSize = 13;
+        }
+
+        Button.ButtonMenuSaves {
+            Position = (0, 94.25);
+            Renderer = &1;
+            Size = (398, 94.25);
+            Text = Saves;
+            TextSize = 13;
+        }
+
+        Button.ButtonSettings {
+            Position = (0, 188.5);
+            Renderer = &1;
+            Size = (398, 94.25);
+            Text = Settings;
+            TextSize = 13;
+        }
+
+        Button.ButtonExit {
+            Position = (0, 282.75);
+            Renderer = &1;
+            Size = (398, 94.25);
+            Text = "Main Menu";
+            TextSize = 13;
+        }
+    }
+}
+
+ChildWindow.WindowBuild {
+    CloseBehavior = Remove;
+    KeepInParent = true;
+    Position = (30, 80);
+    Renderer = &6;
+    Resizable = true;
+    Size = (350, 380);
+    TitleAlignment = Center;
+    TitleButtons = None;
+    TitleTextSize = 13;
+    UserData = GroupMain;
+    Visible = false;
+
+    Button.ButtonBuildBack {
+        Position = (5.75%, 83.48%);
+        Renderer = &1;
+        Size = (19.54%, 10.74%);
+        Text = Back;
+        TextSize = 20;
+    }
+
+    Picture.PictureBuildWindow {
+        Position = (5.75%, 19.9994);
+        Size = (60, 60);
+
+        Renderer {
+            Texture = "resources/DefaultPicture.png" Smooth;
+            TransparentTexture = false;
+        }
+    }
+
+    Label.LabelBuildTitle {
+        HorizontalAlignment = Center;
+        Position = (5.75%, 4.6927);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (88.79%, 10.86%);
+        Text = Title;
+        TextSize = 16;
+        VerticalAlignment = Bottom;
+    }
+
+    Label.LabelBuildHp {
+        Position = (99.988, 49.9985);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (129.014, 27.7541);
+        Text = "HP: 0";
+        TextSize = 16;
+    }
+
+    VerticalLayout.LayoutBuildInfo {
+        Position = (0, 80.1862);
+        Renderer = &7;
+        Size = (100.57%, 200.007);
+    }
+}
+
+ChildWindow.WindowUpgrade {
+    CloseBehavior = Remove;
+    KeepInParent = true;
+    Position = (450, 40);
+    Renderer = &6;
+    Resizable = true;
+    Size = (350, 380);
+    TitleAlignment = Center;
+    TitleButtons = None;
+    TitleTextSize = 13;
+    UserData = GroupMain;
+    Visible = false;
+
+    Picture.PictureUpgradeWindow {
+        Position = (5.75%, 19.9994);
+        Size = (60, 60);
+
+        Renderer {
+            Texture = "resources/DefaultPicture.png" Smooth;
+            TransparentTexture = false;
+        }
+    }
+
+    Label.LabelUpgradeTitle {
+        HorizontalAlignment = Center;
+        Position = (5.75%, 4.6927);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (88.79%, 10.86%);
+        Text = Title;
+        TextSize = 16;
+        VerticalAlignment = Bottom;
+    }
+
+    Label.LabelUpgradeCost {
+        Position = (99.988, 39.9985);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (129.014, 27.7541);
+        Text = "Cost:";
+        TextSize = 16;
+    }
+
+    VerticalLayout.LayoutUpgradeInfo {
+        Position = (0, 80.1862);
+        Renderer = &7;
+        Size = (349.984, 190.007);
+    }
+
+    BitmapButton.ButtonUpgradeNext {
+        Image = "resources/mine/img_next.png" NoSmooth;
+        ImageScaling = 1;
+        Position = (260.013, 75%);
+        Renderer = &5;
+        Size = (20%, 20%);
+        TextSize = 13;
+    }
+
+    BitmapButton.ButtonUpgradePrev {
+        Image = "resources/mine/img_prev.png" NoSmooth;
+        ImageScaling = 1;
+        Position = (5.75%, 75%);
+        Renderer = &5;
+        Size = (20%, 20%);
+        TextSize = 13;
+    }
+}
+
+ChildWindow.WindowEntity {
+    CloseBehavior = Remove;
+    KeepInParent = true;
+    Position = (40, 90);
+    Renderer = &6;
+    Resizable = true;
+    Size = (350, 380);
+    TitleAlignment = Center;
+    TitleButtons = None;
+    TitleTextSize = 13;
+    UserData = GroupMain;
+    Visible = false;
+
+    Button.ButtonEntityClose {
+        Position = (5.75%, 83.48%);
+        Renderer = &1;
+        Size = (19.54%, 10.74%);
+        Text = Close;
+        TextSize = 20;
+    }
+
+    Picture.PictureEntity {
+        Position = (5.75%, 19.9994);
+        Size = (60, 60);
+
+        Renderer {
+            Texture = "resources/DefaultPicture.png" Smooth;
+            TransparentTexture = false;
+        }
+    }
+
+    Label.LabelEntityJob {
+        HorizontalAlignment = Center;
+        Position = (5.75%, 4.6927);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (88.79%, 10.86%);
+        Text = Title;
+        TextSize = 16;
+        VerticalAlignment = Bottom;
+    }
+
+    VerticalLayout.LayoutEntity {
+        Position = (0, 80.1862);
+        Renderer = &7;
+        Size = (100.57%, 200.007);
+    }
+}
+
+ChildWindow.WindowConstructions {
+    CloseBehavior = Remove;
+    KeepInParent = true;
+    Position = (0, 300);
+    Renderer = &6;
+    Resizable = true;
+    Size = (350, 300);
+    TitleAlignment = Center;
+    TitleButtons = Close;
+    TitleTextSize = 13;
+    UserData = "";
+    Visible = false;
+
+    ScrollablePanel.ScrollableConstructions {
+        ContentSize = (0, 0);
+        HorizontalScrollbarPolicy = Never;
+        Renderer = &8;
+        Size = (100%, 100%);
+        VerticalScrollbarPolicy = Always;
+
+        HorizontalWrap.HorizontalConstructions {
+            Renderer = &9;
+            Size = (100%, 100%);
+
+            Panel.PanelConstruction {
+                Size = (110, 110);
+
+                Renderer {
+                    BackgroundColor = white;
+                    BorderColor = black;
+                    TextureBackground = None;
+                }
+
+                Picture.PictureConstruction {
+                    Position = (20%, 5%);
+                    Size = (60%, 60%);
+
+                    Renderer {
+                        Texture = "resources/DefaultPicture.png" Smooth;
+                        TransparentTexture = false;
+                    }
+                }
+
+                Label.LabelConstruction {
+                    HorizontalAlignment = Center;
+                    Position = (0%, 70%);
+                    Renderer = &4;
+                    ScrollbarPolicy = Automatic;
+                    Size = (100%, 30%);
+                    Text = Label;
+                    TextSize = 13;
+                }
+            }
+        }
+    }
+}
+
+ChildWindow.WindowConstruction {
+    CloseBehavior = Remove;
+    KeepInParent = true;
+    Position = (400, 120);
+    Renderer = &6;
+    Resizable = true;
+    Size = (350, 300);
+    TitleAlignment = Center;
+    TitleButtons = Close;
+    TitleTextSize = 13;
+    UserData = GroupMain;
+    Visible = false;
+
+    Button.ButtonConstructionBack {
+        Position = (5.75%, 83.48%);
+        Renderer = &1;
+        Size = (19.54%, 10.74%);
+        Text = Back;
+        TextSize = 20;
+    }
+
+    Picture.PictureConstrWindow {
+        Position = (5.75%, 49.9994);
+        Size = (100, 100);
+
+        Renderer {
+            Texture = "resources/DefaultPicture.png" Smooth;
+            TransparentTexture = false;
+        }
+    }
+
+    Label.LabelConstrTitle {
+        HorizontalAlignment = Center;
+        Position = (5.75%, 3.61%);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (88.79%, 10.86%);
+        Text = Title;
+        TextSize = 16;
+        VerticalAlignment = Bottom;
+    }
+
+    Label.LabelConstrCost {
+        Position = (43.1%, 18.05%);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (42.82%, 25.3%);
+        Text = "Cost:";
+        TextSize = 16;
+    }
+
+    Label.LabelConstrWork {
+        Position = (43.1%, 43.32%);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (42.82%, 10.86%);
+        Text = "Work:";
+        TextSize = 16;
+        VerticalAlignment = Bottom;
+    }
+
+    Picture.PictureWorkIcon {
+        Position = (290.011, 119.996);
+        Size = (8.62%, 10.83%);
+
+        Renderer {
+            Texture = "resources/DefaultPicture.png" Smooth;
+            TransparentTexture = false;
+        }
+    }
+
+    Label.LabelConstrDescr {
+        Position = (5.75%, 57.76%);
+        Renderer = &4;
+        ScrollbarPolicy = Automatic;
+        Size = (88.79%, 22.52%);
+        Text = Description;
+        TextSize = 16;
+    }
+
+    Button.ButtonConstructionConfirm {
+        Position = (240.026, 83.48%);
+        Renderer = &1;
+        Size = (87.9992, 10.74%);
+        Text = Confirm;
+        TextSize = 20;
+    }
+}
+
+ChildWindow.WindowSaves {
+    CloseBehavior = Remove;
+    Position = (260, 80);
+    Renderer = &6;
+    Resizable = true;
+    Size = (520, 450);
+    TitleAlignment = Center;
+    TitleButtons = Close;
+    TitleTextSize = 13;
+    Visible = false;
+
+    ScrollablePanel.ScrollableSave {
+        ContentSize = (0, 0);
+        HorizontalScrollbarPolicy = Automatic;
+        Renderer = &8;
+        Size = (100%, 100%);
+        VerticalScrollbarPolicy = Automatic;
+
+        HorizontalWrap.LayoutSaves {
+            Renderer = &9;
+            Size = (100%, 100%);
+
+            Panel.PanelSave {
+                Renderer = &2;
+                Size = (100%, 150);
+
+                Picture.PictureSave {
+                    Position = (1.93%, 12.83%);
+                    Size = (19.31%, 64.14%);
+
+                    Renderer {
+                        Texture = "resources/DefaultPicture.png" Smooth;
+                        TransparentTexture = false;
+                    }
+                }
+
+                Button.ButtonSaveLoad {
+                    Position = (36.68%, 75.57%);
+                    Renderer = &1;
+                    Size = (20%, 20%);
+                    Text = Load;
+                    TextSize = 13;
+                }
+
+                Button.ButtonSaveSave {
+                    Position = (57.91%, 75.57%);
+                    Renderer = &1;
+                    Size = (20%, 20%);
+                    Text = Save;
+                    TextSize = 13;
+                }
+
+                Button.ButtonSaveDelete {
+                    Position = (79.15%, 75.57%);
+                    Renderer = &1;
+                    Size = (20%, 20%);
+                    Text = Delete;
+                    TextSize = 13;
+                }
+
+                Label.LabelSavePopulation {
+                    Position = (23.17%, 38.49%);
+                    Renderer = &4;
+                    ScrollbarPolicy = Automatic;
+                    Size = (34.56%, 14.81%);
+                    Text = "Population:";
+                    TextSize = 13;
+                }
+
+                Label.LabelSaveScenario {
+                    Position = (23.17%, 25.65%);
+                    Renderer = &4;
+                    ScrollbarPolicy = Automatic;
+                    Size = (41.31%, 14.81%);
+                    Text = "Scenario:";
+                    TextSize = 13;
+                }
+
+                Label.LabelSaveTime {
+                    Position = (23.17%, 12.83%);
+                    Renderer = &4;
+                    ScrollbarPolicy = Automatic;
+                    Size = (42.66%, 14.81%);
+                    Text = "Last Save:";
+                    TextSize = 13;
+                }
+
+                Label.LabelSaveName {
+                    HorizontalAlignment = Center;
+                    Position = (48.26%, 0%);
+                    Renderer = &4;
+                    ScrollbarPolicy = Automatic;
+                    Size = (19.69%, 19.12%);
+                    Text = Save00;
+                    TextSize = 13;
+                }
+            }
+        }
+    }
+}

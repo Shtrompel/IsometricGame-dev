@@ -1,0 +1,131 @@
+{
+    "textures": [
+        {
+            "count": "4,2",
+            "name": "entity_sprites",
+            "path": "sprites/entities"
+        },
+        {
+            "count": "4,2",
+            "name": "entity_fighter",
+            "path": "sprites/entities"
+        },
+        {
+            "count": "2,1",
+            "name": "entity",
+            "path": "sprites/entities"
+        },
+        {
+            "count": "2,1",
+            "name": "enemy",
+            "path": "sprites/entities"
+        },
+        {
+            "count": "2,3",
+            "name": "constrworker",
+            "path": "sprites/entities"
+        },
+        {
+            "count": "4,3",
+            "name": "home",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1, 1",
+            "name": "home3",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "3,2",
+            "name": "tile",
+            "path": "sprites/ground"
+        },
+        {
+            "count": "1,1",
+            "name": "generator",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "storage",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "construction",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "graveyard",
+            "path": "sprites/ground"
+        },
+        {
+            "count": "2,2",
+            "name": "capacitor",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "4,3",
+            "name": "resource_raw",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "miners_post",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "wall",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "8,3",
+            "divisions": "1,1",
+            "name": "big37",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "1,1",
+            "name": "mine",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "3,1",
+            "name": "other",
+            "path": "sprites"
+        },
+        {
+            "count": "1,1",
+            "name": "teleporter",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "2,1",
+            "name": "armory",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "2,1",
+            "name": "tower",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "6,6",
+            "divisions": "2,2",
+            "name": "park",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "8,1",
+            "name": "bullet",
+            "path": "sprites/bullets"
+        },
+        {
+            "count": "1, 1",
+            "name": "logistics_center",
+            "path": "sprites/builds"
+        }
+    ]
+}

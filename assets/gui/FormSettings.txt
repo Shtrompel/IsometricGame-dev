@@ -1,0 +1,406 @@
+Renderer.1 {
+    ArrowBackgroundColor = #F5F5F5;
+    ArrowBackgroundColorHover = white;
+    ArrowColor = #3C3C3C;
+    ArrowColorHover = black;
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BorderColor = black;
+    Borders = (1, 1, 1, 1);
+    Padding = (0, 0, 0, 0);
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextureArrow = None;
+    TextureArrowDisabled = None;
+    TextureArrowHover = None;
+    TextureBackground = None;
+    TextureBackgroundDisabled = None;
+
+    ListBox {
+        BackgroundColor = #F5F5F5;
+        BackgroundColorHover = white;
+        BorderColor = black;
+        Borders = (1, 1, 1, 1);
+        Padding = (0, 0, 0, 0);
+        SelectedBackgroundColor = #006EFF;
+        SelectedBackgroundColorHover = #1E96FF;
+        SelectedTextColor = white;
+        TextColor = #3C3C3C;
+        TextColorHover = black;
+        TextureBackground = None;
+
+        Scrollbar {
+            ArrowBackgroundColor = #F5F5F5;
+            ArrowBackgroundColorHover = white;
+            ArrowColor = #3C3C3C;
+            ArrowColorHover = black;
+            TextureArrowDown = None;
+            TextureArrowDownHover = None;
+            TextureArrowUp = None;
+            TextureArrowUpHover = None;
+            TextureThumb = None;
+            TextureThumbHover = None;
+            TextureTrack = None;
+            TextureTrackHover = None;
+            ThumbColor = #DCDCDC;
+            ThumbColorHover = #E6E6E6;
+            TrackColor = #F5F5F5;
+        }
+    }
+}
+
+Renderer.2 {
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BackgroundColorHover = white;
+    BorderColor = #3C3C3C;
+    BorderColorDisabled = #7D7D7D;
+    BorderColorFocused = #1E1EB4;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    CheckColor = #3C3C3C;
+    CheckColorDisabled = #7D7D7D;
+    CheckColorHover = black;
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextColorHover = black;
+    TextDistanceRatio = 0.2;
+    TextureChecked = None;
+    TextureCheckedDisabled = None;
+    TextureCheckedFocused = None;
+    TextureCheckedHover = None;
+    TextureUnchecked = None;
+    TextureUncheckedDisabled = None;
+    TextureUncheckedFocused = None;
+    TextureUncheckedHover = None;
+}
+
+Renderer.3 {
+    BorderColor = #3C3C3C;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    TextureThumb = None;
+    TextureThumbHover = None;
+    TextureTrack = None;
+    TextureTrackHover = None;
+    ThumbColor = #F5F5F5;
+    ThumbColorHover = white;
+    TrackColor = #F5F5F5;
+    TrackColorHover = white;
+}
+
+Renderer.4 {
+    BackgroundColor = transparent;
+    BorderColor = #3C3C3C;
+    Borders = (0, 0, 0, 0);
+    TextColor = #3C3C3C;
+    TextureBackground = None;
+
+    Scrollbar {
+        ArrowBackgroundColor = #F5F5F5;
+        ArrowBackgroundColorHover = white;
+        ArrowColor = #3C3C3C;
+        ArrowColorHover = black;
+        TextureArrowDown = None;
+        TextureArrowDownHover = None;
+        TextureArrowUp = None;
+        TextureArrowUpHover = None;
+        TextureThumb = None;
+        TextureThumbHover = None;
+        TextureTrack = None;
+        TextureTrackHover = None;
+        ThumbColor = #DCDCDC;
+        ThumbColorHover = #E6E6E6;
+        TrackColor = #F5F5F5;
+    }
+}
+
+Renderer.5 {
+    BackgroundColor = #F5F5F5;
+    BackgroundColorDisabled = #E6E6E6;
+    BackgroundColorDown = #EBEBEB;
+    BackgroundColorHover = white;
+    BorderColor = #3C3C3C;
+    BorderColorDisabled = #7D7D7D;
+    BorderColorDown = black;
+    BorderColorFocused = #1E1EB4;
+    BorderColorHover = black;
+    Borders = (1, 1, 1, 1);
+    TextColor = #3C3C3C;
+    TextColorDisabled = #7D7D7D;
+    TextColorDown = black;
+    TextColorHover = black;
+    Texture = None;
+    TextureDisabled = None;
+    TextureDown = None;
+    TextureDownFocused = None;
+    TextureDownHover = None;
+    TextureFocused = None;
+    TextureHover = None;
+}
+
+ChildWindow.WindowSettings {
+    KeepInParent = true;
+    MaximumSize = (0, 0);
+    Position = (120, 0);
+    Resizable = true;
+    Size = (464, 580);
+    Title = Setttings;
+    TitleAlignment = Center;
+    TitleButtons = Minimize | Maximize | Close;
+    TitleTextSize = 13;
+
+    Renderer {
+        BackgroundColor = #E6E6E6;
+        BorderBelowTitleBar = 1;
+        BorderColor = black;
+        Borders = (1, 1, 1, 1);
+        DistanceToSide = 3;
+        PaddingBetweenButtons = 1;
+        ShowTextOnTitleButtons = true;
+        TextureBackground = None;
+        TextureTitleBar = None;
+        TitleBarColor = white;
+        TitleColor = #3C3C3C;
+
+        CloseButton {
+            BackgroundColor = #F5F5F5;
+            BackgroundColorDisabled = #E6E6E6;
+            BackgroundColorDown = #EBEBEB;
+            BackgroundColorHover = white;
+            BorderColor = #3C3C3C;
+            BorderColorDisabled = #7D7D7D;
+            BorderColorDown = black;
+            BorderColorFocused = #1E1EB4;
+            BorderColorHover = black;
+            Borders = (1, 1, 1, 1);
+            TextColor = #3C3C3C;
+            TextColorDisabled = #7D7D7D;
+            TextColorDown = black;
+            TextColorHover = black;
+            Texture = None;
+            TextureDisabled = None;
+            TextureDown = None;
+            TextureDownFocused = None;
+            TextureDownHover = None;
+            TextureFocused = None;
+            TextureHover = None;
+        }
+
+        MaximizeButton {
+            BackgroundColor = #F5F5F5;
+            BackgroundColorDown = #EBEBEB;
+            BackgroundColorHover = white;
+            BorderColor = #3C3C3C;
+            BorderColorDown = black;
+            BorderColorHover = black;
+            Borders = (1, 1, 1, 1);
+            TextColor = #3C3C3C;
+            TextColorDown = black;
+            TextColorHover = black;
+            Texture = None;
+            TextureDisabled = None;
+            TextureDown = None;
+            TextureDownFocused = None;
+            TextureDownHover = None;
+            TextureFocused = None;
+            TextureHover = None;
+        }
+
+        MinimizeButton {
+            BackgroundColor = #F5F5F5;
+            BackgroundColorDown = #EBEBEB;
+            BackgroundColorHover = white;
+            BorderColor = #3C3C3C;
+            BorderColorDown = black;
+            BorderColorHover = black;
+            Borders = (1, 1, 1, 1);
+            TextColor = #3C3C3C;
+            TextColorDown = black;
+            TextColorHover = black;
+            Texture = None;
+            TextureDisabled = None;
+            TextureDown = None;
+            TextureDownFocused = None;
+            TextureDownHover = None;
+            TextureFocused = None;
+            TextureHover = None;
+        }
+    }
+
+    ComboBox.ComboResolution {
+        ChangeItemOnScroll = false;
+        ItemsToDisplay = 0;
+        MaximumItems = 0;
+        Position = (40%, 45%);
+        Renderer = &1;
+        Size = (50%, 5%);
+        TextSize = 13;
+    }
+
+    CheckBox.CheckFullscreen {
+        Position = (40%, 55%);
+        Renderer = &2;
+        Size = (5%, 5%);
+        TextSize = 13;
+    }
+
+    CheckBox.CheckVSync {
+        Position = (40%, 65%);
+        Renderer = &2;
+        Size = (5%, 5%);
+        TextSize = 13;
+    }
+
+    ComboBox.ComboSaving {
+        ChangeItemOnScroll = false;
+        ItemsToDisplay = 0;
+        MaximumItems = 0;
+        Position = (40%, 75%);
+        Renderer = &1;
+        Size = (50%, 5%);
+        TextSize = 13;
+    }
+
+    ComboBox.ComboGraphicsQuality {
+        ChangeItemOnScroll = false;
+        ItemsToDisplay = 0;
+        MaximumItems = 0;
+        Position = (40%, 35%);
+        Renderer = &1;
+        Size = (50%, 5%);
+        TextSize = 13;
+    }
+
+    Slider.SliderMusicVolume {
+        ChangeValueOnScroll = true;
+        InvertedDirection = false;
+        Maximum = 100;
+        Minimum = 0;
+        Position = (39.96%, 15%);
+        Renderer = &3;
+        Size = (38.61%, 5%);
+        Step = 1;
+        Value = 0;
+    }
+
+    Slider.SliderFxVolume {
+        ChangeValueOnScroll = true;
+        InvertedDirection = false;
+        Maximum = 100;
+        Minimum = 0;
+        Position = (39.96%, 25%);
+        Renderer = &3;
+        Size = (38.61%, 5%);
+        Step = 1;
+        Value = 0;
+    }
+
+    Label.LabelMusicVolume {
+        Position = (2.5%, 15%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Music Volume:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelFxVolume {
+        Position = (2.5%, 25%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Game Volume:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelGraphicsQuality {
+        Position = (2.5%, 35%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Graphics Quality:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelResolution {
+        Position = (2.5%, 45%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Resolution:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelFullscreen {
+        Position = (2.5%, 55%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Is Fullscreen:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelVSync {
+        Position = (2.5%, 65%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Enable VSync:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Label.LabelSaving {
+        Position = (2.5%, 75%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "Autosave:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Slider.SliderUIVolume {
+        ChangeValueOnScroll = true;
+        InvertedDirection = false;
+        Maximum = 100;
+        Minimum = 0;
+        Position = (39.96%, 5%);
+        Renderer = &3;
+        Size = (38.61%, 5%);
+        Step = 1;
+        Value = 0;
+    }
+
+    Label.Label1 {
+        Position = (2.5%, 5%);
+        Renderer = &4;
+        Size = (26.83%, 5%);
+        Text = "UI Volume:";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
+    Button.ButtonConfirm {
+        Position = (70%, 83.95%);
+        Renderer = &5;
+        Size = (25%, 8.98%);
+        Text = Confirm;
+        TextSize = 13;
+    }
+
+    Button.ButtonCancel {
+        Position = (5%, 83.95%);
+        Renderer = &5;
+        Size = (25%, 8.98%);
+        Text = Cancel;
+        TextSize = 13;
+    }
+
+    Button.ButtonApply {
+        Position = (42.5%, 83.95%);
+        Renderer = &5;
+        Size = (25%, 8.98%);
+        Text = Apply;
+        TextSize = 13;
+    }
+}

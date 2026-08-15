@@ -1,0 +1,12 @@
+
+
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target clean && rm -rf build
+cmake --build build -j4
+
+set environment LSAN_OPTIONS=suppressions=lsan_suppress.txt
+
+LD_LIBRARY_PATH=./lib LSAN_OPTIONS=suppressions=lsan_suppress.txt ./bin/IsometricGame
+./build/SFML_TGUI_Game
+gdb ./build/SFML_TGUI_Game
+LD_LIBRARY_PATH=./lib LSAN_OPTIONS=suppressions=lsan_suppress.txt ./build/SFML_TGUI_Game

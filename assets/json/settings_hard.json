@@ -1,0 +1,133 @@
+
+{
+	
+	"resolutions":
+	[
+	{
+		"ratio": {"x": 16, "y": 9},
+		"x":2560,
+		"y":1440,
+		"title": "2560x1440"
+	},
+	{
+		"ratio": {"x": 16, "y": 9},
+		"x":1920,
+		"y":1080,
+		"title": "1920x1080"
+	},
+	{
+		"ratio": {"x": 16, "y": 9},
+		"x":1600,
+		"y":900,
+		"title": "1600x900"
+	},
+	{
+		"ratio": {"x": 16, "y": 9},
+		"x":1366,
+		"y":768,
+		"title": "1366x768"
+	},
+	{
+		"ratio": {"x": 16, "y": 9},
+		"x":1280,
+		"y":720,
+		"title": "1280x720"
+	},
+	
+	{
+		"ratio": {"x": 16, "y": 10},
+		"x":1920,
+		"y":1200,
+		"title": "1920x1200"
+	},
+	{
+		"ratio": {"x": 16, "y": 10},
+		"x":1680,
+		"y":1050,
+		"title": "1680x1050"
+	},
+	{
+		"ratio": {"x": 16, "y": 10},
+		"x":1440,
+		"y":900,
+		"title": "1440x900"
+	},
+	{
+		"ratio": {"x": 16, "y": 10},
+		"x":1280,
+		"y":800,
+		"title": "1280x800"
+	},
+	
+	{
+		"ratio": {"x": 4, "y": 3},
+		"x":1024,
+		"y":768,
+		"title": "1024x768"
+	},
+	{
+		"ratio": {"x": 4, "y": 3},
+		"x":800,
+		"y":600,
+		"title": "800x600"
+	},
+	{
+		"ratio": {"x": 4, "y": 3},
+		"x":640,
+		"y":480,
+		"title": "640x480"
+	}
+	],
+	
+	"quality":
+	[
+	{
+		"index": 0,
+		"title": "Minimal"
+	},
+	{
+		"index": 1,
+		"title": "Normal"
+	},
+	{
+		"index": 2,
+		"title": "Maxmimum"
+	}
+	],
+	
+	"autosave inerval":
+	[
+	{
+		"minutes": 0,
+		"title": "Never"
+	},
+	{
+		"minutes": 5,
+		"title": "5 minutes"
+	},
+	{
+		"minutes": 10,
+		"title": "10 minutes"
+	},
+	{
+		"minutes": 30,
+		"title": "30 minutes"
+	},
+	{
+		"minutes": 60,
+		"title": "60 minutes"
+	}
+	],
+	
+	"defaults": {
+			"volume_ui": 70,
+			"volume_music": 70,
+			"volume_game": 70,
+			"graphics_quality": "Normal",
+			"resolution": "640x480",
+			"is_fullscreen": false,
+			"enable_vsync": false,
+			"autosave_interval": "10 minutes"
+	}
+	
+}

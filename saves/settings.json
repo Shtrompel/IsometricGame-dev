@@ -1,0 +1,12 @@
+{
+    "settings": {
+        "autosave_interval": "10 minutes",
+        "enable_vsync": false,
+        "graphics_quality": "Normal",
+        "is_fullscreen": false,
+        "resolution": "640x480",
+        "volume_game": 70,
+        "volume_music": 70,
+        "volume_ui": 70
+    }
+}

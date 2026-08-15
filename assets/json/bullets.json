@@ -1,0 +1,32 @@
+{
+    "bullets":
+    [
+		{
+            "id": 0,
+			"type_str": "BulletType::DEFAULT",
+            "damage": 2.0,
+            "max_speed": 2.0,
+            "max_force": 1.0,
+			"life_span": 5.0,
+			"max_dist": 20.0,
+            "frames": "bullet 0,0 - 7,0",
+            "nums": "{NONE}",
+            "bools": "{NONE}",
+			"radius": 0.3
+        },
+		{
+            "id": 1,
+			"parent": 0,
+			"alignment": "FRIENDLY",
+			"type_str": "BulletType::ENEMY_BULLET_01",
+			"bools": "{SPECTRAL}"
+        },
+		{
+            "id": 2,
+			"parent": 0,
+			"alignment": "ENEMY",
+			"type_str": "BulletType::ENEMY_BULLET_HOMING",
+			"bools": "{SPECTRAL}"
+        }
+    ]
+}

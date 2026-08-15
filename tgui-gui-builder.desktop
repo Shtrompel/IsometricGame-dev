@@ -1,0 +1,7 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Type=Application
+Version=1.13
+Name=TGUI Gui Builder
+Icon=TexusGUI
+Exec=/usr/local/share/tgui-1/gui-builder/gui-builder
