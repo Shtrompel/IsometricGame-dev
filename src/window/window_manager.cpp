@@ -9,20 +9,19 @@ WindowManager::WindowManager(sf::RenderWindow* window, sf::View* view)
 	this->view = view;
 }
 
-void WindowManager::init_manager()
+GameWindow *WindowManager::add_window(GameWindow *window, const std::string &id, bool setCurrent)
 {
-	windows.push_back(new WindowGameplay);
-	this->windowsMap["GAMEPLAY"] = windows.back();
+	windows.push_back(window);
 
-	windows.push_back(new WindowMenu);
-	this->windowsMap["MENU"] = windows.back();
+	if (this->windowsMap.count(id))
+		return nullptr;
+	this->windowsMap[id] = windows.back();
+    window->managerParent = this;
 
-	current = windowsMap["GAMEPLAY"];
+	if (setCurrent)
+		current = window;
 
-	for (GameWindow* window : windows)
-	{
-		window->managerParent = this;
-	}
+	return window;
 }
 
 GameWindow* WindowManager::get_current()
@@ -193,6 +192,8 @@ bool json_settings_load(
 		jSettings.at("is_fullscreen").get_to(settings.isFullscreen);
 		jSettings.at("enable_vsync").get_to(settings.enableVSync);
 
+		jSettings.at("ui_scaling").get_to(settings.uiScale);
+
 	}
 	catch (const nlohmann::json::exception& e)
 	{
@@ -217,6 +218,7 @@ bool json_settings_save(nlohmann::json& jOut, const GameSettings& settings)
 	jOut["is_fullscreen"] = settings.isFullscreen;
 	jOut["enable_vsync"] = settings.enableVSync;
 	jOut["autosave_interval"] = settings.interval.title;
+	jOut["ui_scaling"] = settings.uiScale;
 
 	return true;
 }

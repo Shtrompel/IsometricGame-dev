@@ -108,3 +108,5 @@ bool guiutils_save_files(
 t_savedgames list_saved_games();
 
 t_jsonpack file_read_jsonpack(const std::wstring &fileName, bool compact);
+
+nlohmann::json file_read_save_info(const std::wstring &fileName, bool compact);

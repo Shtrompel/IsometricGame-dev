@@ -53,11 +53,37 @@ t_sprite UpgradeTree::get_sprite(
 		return (*itr).second;
 }
 
-	std::string UpgradeTree::to_string(GameData* data, bool flag) const {
-		// Implementation here
-		DEBUG("TODO IMPLEMENT");
-		return "TODO IMPLEMENT"; 
+std::string UpgradeTree::to_string(GameData* data, bool verbose) const {
+	std::stringstream ss;
+
+	if (verbose) {
+		ss << "Name: " << (name[0] ? name : "Unknown") << "\n";
+		if (description[0]) ss << "Description: " << description << "\n";
+		if (hp != NULL_INT) ss << "HP: " << hp << "\n";
+		if (buildWork > 0) ss << "Build Work: " << buildWork << "\n";
+		
+		if (data) {
+			Resources b = build, i = input, o = output;
+			if (!b.empty()) ss << "Cost: " << data->resources_to_str(b) << "\n";
+			if (!i.empty()) ss << "Input: " << data->resources_to_str(i) << "\n";
+			if (!o.empty()) ss << "Output: " << data->resources_to_str(o) << "\n";
+		}
+		
+		if (powerIn > 0) ss << "Power In: " << powerIn << "\n";
+		if (powerOut > 0) ss << "Power Out: " << powerOut << "\n";
+		if (powerStore > 0) ss << "Power Store: " << powerStore << "\n";
+		if (entityLimit != NULL_INT && entityLimit > 0) ss << "Entity Limit: " << entityLimit << "\n";
+		if (effectRadius != NULL_FLOAT && effectRadius > 0) ss << "Effect Radius: " << effectRadius << "\n";
+	} else {
+		ss << (name[0] ? name : "Unknown");
+		if (data) {
+			Resources b = build;
+			if (!b.empty()) ss << " (Cost: " << data->resources_to_str(b) << ")";
+		}
 	}
+
+	return ss.str();
+}
 
 // Building base
 
@@ -381,6 +407,9 @@ void BuildingBase::load_upgrade_step(UpgradeTree *step, void *tree)
 		return;
 	}
 
+	// Check if the building was powered prior to the upgrade
+	bool wasPowered = props.bool_is(PropertyBool::POWER_NETWORK);
+
 	this->id = step->type.id;
 	this->upgrades.push_back(step->upgradeId);
 	if (step->size != sf::Vector2i{-1, -1})
@@ -390,11 +419,11 @@ void BuildingBase::load_upgrade_step(UpgradeTree *step, void *tree)
 	{
 		if (strlen(this->name))
 		{
-			DEBUG("Before %s %s", step->name, this->name);
+			DEBUG("Before name change %s -> \"%s\"", step->name, this->name);
 			strcpy(
 				this->name,
 				string_format(this->name, step->name).c_str());
-			DEBUG("After %s %s", step->name, this->name);
+			DEBUG("After %s -> \"%s\"", step->name, this->name);
 		}
 		else
 		{
@@ -426,20 +455,6 @@ void BuildingBase::load_upgrade_step(UpgradeTree *step, void *tree)
 
 	if (step->job != CitizenJob::NONE)
 		this->job = (size_t)step->job;
-	/*
-if (strlen(step->job))
-{
-	if (str_is_num(step->job))
-		this->job = (CitizenJob)(std::stoi(step->job) + (int)CitizenJob::NONE);
-	else if (JOB_STRING.count(step->job))
-		this->job = JOB_STRING.at(str_uppercase(std::string(step->job)));
-	else
-	{
-		char buf[MAX_SHORT_STR];
-		sprintf(buf, "Unknown job: %s", step->job);
-		ASSERT_ERROR(false, buf);
-	}
-}*/
 
 #define SET_R(a, b) \
 	if (!b.empty()) \
@@ -472,6 +487,26 @@ if (strlen(step->job))
 	}
 
 	props.append(step->props);
+
+	if (!wasPowered && props.bool_is(PropertyBool::POWER_NETWORK) && context)
+	{
+		context->connect_building_network(this);
+	}
+	
+	for (auto& entityPtr : this->entities)
+	{
+		if (!entityPtr.is_valid())
+			continue;;
+		
+		if (entityPtr->type != BodyType::ENTITY)
+			continue;
+
+		EntityCitizen* citizen = dynamic_cast<EntityCitizen*>(entityPtr.get());
+		if (!citizen) 
+			continue;
+		
+		citizen->recalculate_worker_stats();
+	}
 }
 
 bool BuildingBase::tree_similar(BuildingBase *other)
@@ -509,46 +544,6 @@ void BuildingBase::damage(int attack)
 	if (hp <= 0)
 		hp = 0;
 }
-/*
-inline void BuildingBase::bool_reset()
-{
-	std::fill(
-		std::begin(arrPropertyBools),
-		std::end(arrPropertyBools),
-		false);
-}
-
-bool BuildingBase::bool_is(PropertyBool x) const
-{
-	return arrPropertyBools[(size_t)x - (size_t)PropertyBool::NONE];
-}
-
-inline t_use BuildingBase::bool_set(PropertyBool x, bool b)
-{
-	return arrPropertyBools[(size_t)x - (size_t)PropertyBool::NONE] = b;
-}
-
-inline void BuildingBase::num_reset()
-{
-	propertyVals.clear();
-}
-
-bool BuildingBase::num_is(PropertyNum x) const
-{
-	return propertyVals.count(x);
-}
-
-double BuildingBase::num_set(PropertyNum x, double d)
-{
-	// printf("%s %f ", global_enum_to_str(x).c_str(), d);
-	return propertyVals[x] = d;
-}
-
-double BuildingBase::num_get(PropertyNum x)
-{
-	return propertyVals[x];
-}
-*/
 
 BuildingBody *BuildingBase::get_body() const
 {
@@ -666,6 +661,9 @@ void BuildingBase::accept_entity_job(EntityCitizen *e)
 	context
 		->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job)
 		->insert(vec_pos_to_tile(e->pos), e);
+	
+	// Apply building specific stats
+	e->recalculate_worker_stats();
 }
 
 void BuildingBase::enter_entity(EntityCitizen *e)
@@ -733,8 +731,11 @@ BuildingBase::remove_entity(EntityCitizen *e)
 			context->get_tree(ENUM_INGAME_PROPERTIES, nw)->insert(bbody->tilePos, body); });
 	}
 
+	t_tiletree* jobTree;
+	context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job);
+
 	// Remove from the old job tree BEFORE changing the variable
-	context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job)->remove(vec_pos_to_tile(e->pos), e);
+	jobTree->remove(vec_pos_to_tile(e->pos), e);
 
 	e->workplace = nullptr;
 	e->job = CitizenJob::NONE;
@@ -744,7 +745,7 @@ BuildingBase::remove_entity(EntityCitizen *e)
 	auto ret = this->entities.erase(itr);
 
 	// Add it to the new NONE tree so it can be properly tracked
-	context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job)->insert(vec_pos_to_tile(e->pos), e);
+	jobTree->insert(vec_pos_to_tile(e->pos), e);
 
 	return ret;
 }
@@ -766,6 +767,8 @@ void BuildingBase::update()
 					  [](GameBody *body)
 					  { body->visible = false; });
 	}
+
+	int actionTimes = actionTimer->count_times(context->get_time());
 
 	if (this->hp != this->lastHp)
 	{
@@ -847,7 +850,7 @@ void BuildingBase::update()
 		}
 	}
 
-	// From here, everything can only work if the building active
+	// From here, everything can only work if the building is active
 	if (!active)
 		return;
 
@@ -861,21 +864,27 @@ void BuildingBase::update()
 	unsigned ioTime = 0;
 
 	// Resource io goes here
+
+	// Count how many time we should consume resources
 	while (costTimer->next_surplus(context->get_time()))
 		++ioTime;
 
-	// If it's time to gemerateqconsume resources
+	// If it's time to gemerate and consume resources
 	for (unsigned i = 0; i < ioTime; ++i)
 	{
 		// Check if storage can afford the input
-		sufficient = rStorage.affordable(rIn * storedCount);
+		bool hasResources = rStorage.affordable(rIn * storedCount);
+
+		// Avoid resource consumption if there is no power
+		bool hasPower = !(powerIn > 0 && !wasSufficient);
+		sufficient = hasResources && hasPower;
 
 		// If it's part of a network
 		if (network &&
 			props.bool_is(PropertyBool::POWER_NETWORK) &&
 			this->powerOut)
 		{
-			// If the building had the ability to geenrate power
+			// If the building had the ability to generate power
 			if (wasSufficient && !sufficient)
 			{
 				// Slowly dampen the power it's generate until it's 0s
@@ -901,7 +910,7 @@ void BuildingBase::update()
 	{
 		Resources out = this->rPending;
 
-		if (buildType == (int)BuildingType::GENRATOR && 0)
+		if (buildType == (int)BuildingType::GENERATOR && 0)
 			DEBUG("%s %s %d %s", CSTR(rStorage), CSTR(this->rIn), (int)storedCount, CSTR((this->rIn * storedCount)));
 		// Remove from storage the nessesey resources
 		rStorage -= this->rIn * storedCount;
@@ -972,22 +981,29 @@ void BuildingBase::update()
 		}
 	}
 
-	if (!target && !isHome)
-		return;
+	//if (!target && !isHome && spawn.serializableID != 0)
+	//	return;
 
 	// Spawning
-	while (actionTimer->next_surplus(context->get_time()))
+	for (int i = 0; i < actionTimes; ++i)
 	{
-		if (!is_operational())
-			break;
 
-		if (isHome && !((entities.size() < entityLimit) ||
-						(spawn.id.id != (t_id)BodyType::ENTITY)))
-		{
-			break;
+		if (!is_operational())
+			continue;
+
+		// Clean up dead entities (null VariantPtrs) so they don't count towards the limit
+		for (auto itr = entities.begin(); itr != entities.end();) {
+			if (itr->is_null())
+				itr = entities.erase(itr);
+			else
+				++itr;
 		}
 
-		// If the building a home, create new citizens
+		if (entities.size() >= entityLimit)
+		{
+			continue;
+		}
+
 		if (spawn.id.group != ENUM_NONE &&
 			spawn.serializableID != 0)
 		{
@@ -998,13 +1014,13 @@ void BuildingBase::update()
 			{
 				if (!context->get_free_neighbor(
 						freePos, this->get_bodies().back()->pos))
-					break;
+					continue;
 			}
 			else
 				freePos = get_center_pos();
 
 			data.spawn = this->spawn;
-			data.pos = this->get_center_pos();
+			data.pos = freePos;
 			data.alignment = this->alignment;
 
 			if (isOffensive && target)
@@ -1025,44 +1041,12 @@ void BuildingBase::update()
 					data.target = target;
 				}
 			}
-			else if (isHome)
-			{
-				data.home = this;
-				/*
-				GameBody* gb = nullptr;
-
-				if (isOffensive && target )
-					gb = context->add_game_body(
-						spawn.serializableID,
-						spawn.id.group,
-						spawn.id.id,
-						freePos);
-
-				if (!gb || !(gb->type == BodyType::ENTITY))
-					continue;
-
-				EntityBody* entity = dynamic_cast<EntityBody*>(gb);
-
-				assert(entity);
-				if (entity->entityType == EntityType::CITIZEN)
-				{
-					EntityCitizen* citizen = dynamic_cast<EntityCitizen*>(gb);
-					citizen->home = this;
-				}
-				this->entities.push_back(entity);
-				this->updateInfo = true;
-
-				if (entities.size() >= entityLimit)
-				{
-					actionTimer->reset(context->get_time());
-					break;
-				}
-				*/
-			}
 			else
 			{
-				break;
+				data.home = this;
 			}
+			
+			DEBUG("Adding body: %s", data.to_string().c_str());
 
 			context->queue_add_body(data);
 		}

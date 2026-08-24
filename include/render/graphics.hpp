@@ -115,6 +115,7 @@ struct RendererClass
 	bool isBtnPressed = 0;
 
 	bool drawPath = true;
+	bool halfWalls = false;
 
 	t_sprite spriteGrass = -1;
 	t_sprite spriteTileSelected = -1;

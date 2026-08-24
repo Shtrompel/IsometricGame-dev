@@ -66,10 +66,13 @@ struct PropertySet
 
 	void append(const PropertySet<t_use, t_property> &other)
 	{
-		for (const auto &v : other.nums)
-			this->nums.insert(v);
-		for (const auto &v : other.uses)
-			this->uses.insert(v);
+		auto otherNumItr = other.nums.begin();
+		for (; otherNumItr != other.nums.cend(); ++otherNumItr)
+		{
+			this->nums[otherNumItr->first] = otherNumItr->second;
+		}
+
+		this->uses.insert(other.uses.begin(), other.uses.end());
 	}
 
 	// Uses
@@ -221,7 +224,7 @@ struct GameBody : Variant, AbstractCanTarget
 
 	ShapeType shape = ShapeType::POINT;
 	bool visible = true;
-	t_alignment alignment = ALIGNMENT_NONE;
+	t_alignment alignment = NULL_INT;
 
 	std::array<bool, COUNT_PROPERTY_BOOL>
 		arrUseEnums = {false};

@@ -83,7 +83,11 @@ bool WindowMenu::init() {
     return false;
   }
 
-  // --- ButtonSaveFiles Implementation ---
+  // Apply scaling
+  float scaleFactor = managerParent->get_settings().uiScale;
+  gui.setRelativeView(tgui::FloatRect{0.f, 0.f, 1.f / scaleFactor, 1.f / scaleFactor});
+
+  // ButtonSaveFiles Implementation
   get_widget<tgui::Button>("ButtonSaveFiles")
       ->onPress(
           [this](WindowMenu *menuWindow, tgui::Gui &gui) {

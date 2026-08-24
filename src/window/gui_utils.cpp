@@ -5,9 +5,11 @@
 #include <memory>
 
 #include "utils/globals.hpp"
+#include "utils/utils.hpp"
 #include "utils/class/logger.hpp"
 #include "window/game_window.hpp"
 #include "window/window_manager.hpp"
+
 
 #define QUICK_FIND(container, strId, TYPE)                                     \
   (std::find_if(container.begin(), container.end(),                            \
@@ -15,20 +17,28 @@
 
 
 bool file_delete(const std::wstring &fileName) {
-  std::wstring wPath = L"saves/" + fileName + L".json";
-  const wchar_t *cwPath = wPath.c_str();
-
-  std::string cPath;
-  size_t size;
-  cPath.resize(wPath.length());
-
+  auto delete_single_file = [](const std::wstring &wPath) {
+    std::string cPath;
+    cPath.resize(wPath.length());
 #ifdef _WIN32
-  wcstombs_s(&size, &cPath[0], cPath.size() + 1, wPath.c_str(), wPath.size());
+    size_t size;
+    wcstombs_s(&size, &cPath[0], cPath.size() + 1, wPath.c_str(), wPath.size());
 #else
-  wcstombs(&cPath[0], wPath.c_str(), wPath.size());
+    wcstombs(&cPath[0], wPath.c_str(), wPath.size());
 #endif
 
-  std::remove(cPath.c_str());
+    try
+    {
+        std::remove(cPath.c_str());
+    }
+    catch (std::filesystem::filesystem_error& p)
+    {
+      WARNING("%s", p.what());
+    }
+  };
+
+  delete_single_file(L"saves/" + fileName + L".json");
+  delete_single_file(L"saves/" + fileName + L"_info.json");
 
   return false;
 }
@@ -140,6 +150,12 @@ static bool guiutils_offload_settings(tgui::ChildWindow::Ptr &gui,
   else
     return false;
 
+  tgui::Slider::Ptr sliderUIScale = gui->get<tgui::Slider>("SliderUIScale");
+  if (sliderUIScale != nullptr)
+    settings.uiScale = sliderUIScale->getValue() / 100.0f;
+  else
+    return false;
+
   return true;
 }
 
@@ -176,6 +192,10 @@ static bool guiutils_populate_settings(tgui::ChildWindow::Ptr &gui,
   checkVSync = gui->get<tgui::CheckBox>("CheckVSync");
   if (checkVSync != nullptr)
     checkVSync->setChecked(settings.enableVSync);
+  
+  tgui::Slider::Ptr sliderUIScale = gui->get<tgui::Slider>("SliderUIScale");
+  if (sliderUIScale != nullptr)
+    sliderUIScale->setValue(settings.uiScale * 100.0f);
 
   return true;
 }
@@ -250,6 +270,10 @@ bool guiutils_settings(WindowManager *manager, tgui::Gui &gui) {
 
             manager->set_settings_data(settings);
             manager->apply_settings();
+
+            float s = settings.uiScale;
+            DEBUG("GUI confirm %f", s);
+            window->getParentGui()->setRelativeView(tgui::FloatRect{0.f, 0.f, 1.f / s, 1.f / s});
           },
           std::ref(gui), windowNew, manager);
 
@@ -262,6 +286,9 @@ bool guiutils_settings(WindowManager *manager, tgui::Gui &gui) {
 
             manager->set_settings_data(settings);
             manager->apply_settings();
+
+            float s = settings.uiScale;
+            window->getParentGui()->setRelativeView(tgui::FloatRect{0.f, 0.f, 1.f / s, 1.f / s});
 
             window->close();
           },
@@ -280,7 +307,7 @@ std::map<int, std::wstring> list_saved_games() {
   std::error_code ec;
   if (!std::filesystem::exists("./saves", ec)) {
     std::filesystem::create_directories("./saves", ec);
-    return out; // Folder is brand new, so it's empty
+    return out; 
   }
 
   for (const auto &entry : std::filesystem::directory_iterator("./saves")) {
@@ -322,7 +349,16 @@ std::map<int, std::wstring> list_saved_games() {
       continue;
 
     int num = (int)wcstol(fileNumber.c_str(), nullptr, 10);
+    
+    std::wstring dataFile = L"./saves/" + filename + L".json";
+    std::wstring infoFile = L"./saves/" + filename + L"_info.json";
+    
+    if (!std::filesystem::exists(dataFile, ec) || !std::filesystem::exists(infoFile, ec)) {
+      continue;
+    }
+
     DEBUG("Listed Saved Game: %S %d", widePath.c_str(), (int)num);
+
     if (1 <= num && num <= 16) {
       out[num] = filename;
     }
@@ -331,38 +367,6 @@ std::map<int, std::wstring> list_saved_games() {
   return out;
 }
 
-t_jsonpack file_read_jsonpack(const std::wstring &fileName, bool compact) {
-  t_jsonpack out{};
-
-  std::ifstream fileIn;
-  std::wstring path = L"saves/" + fileName + L".json";
-  fileIn.open(std::filesystem::path(path));
-
-  nlohmann::json j;
-
-  try {
-    fileIn.clear();
-    fileIn.seekg(0, std::ios::beg);
-    if (compact) {
-      j = j.from_cbor(fileIn);
-    } else {
-      j = nlohmann::json::parse(fileIn);
-    }
-  } catch (nlohmann::json::exception &e) {
-    fileIn.close();
-    LOG_ERROR("Can't parse json file \"%ls\" Compact: \"%s\": %s", path.c_str(),
-              (compact ? "True" : "False"), e.what());
-    return t_jsonpack{};
-  }
-
-  fileIn.close();
-
-  for (auto &jsonGroup : j.items()) {
-    out[jsonGroup.key()] = jsonGroup.value();
-  }
-
-  return out;
-}
 
 bool guiutils_save_files(
     tgui::Gui &gui, 
@@ -432,15 +436,19 @@ bool guiutils_save_files(
     std::string popText = "Population: ";
 
     if (isExistingSave) {
-      t_jsonpack jsonPack = file_read_jsonpack(fileName, compact);
+      DEBUG("Loading file: %S", fileName.c_str());
+      t_jsonpack jsonPack = file_read_save_info(fileName, compact);
+
       nlohmann::json jsonData;
       if (jsonPack.count("other"))
         jsonData = jsonPack.at("other");
 
       if (jsonData.count("date")) timeText += jsonData.at("date").get<std::string>();
       if (jsonData.count("scenario")) scenarioText += jsonData.at("scenario").get<std::string>();
-      if (jsonData.count("population")) popText += jsonData.at("population").get<std::string>();
-    } else {
+      if (jsonData.count("citizens")) popText += jsonData.at("citizens").get<std::string>();
+    } 
+    else 
+    {
       timeText += "N/A";
       scenarioText += "New Save";
       popText += "0";
@@ -523,6 +531,62 @@ bool guiutils_save_files(
   gui.add(window, "WindowSaves");
 
   return true;
+}
+
+t_jsonpack file_read_jsonpack(const std::wstring &fileName, bool compact) {
+  t_jsonpack out{};
+
+  std::ifstream fileIn;
+  std::wstring path = L"saves/" + fileName + L".json";
+  fileIn.open(std::filesystem::path(path));
+
+  nlohmann::json j;
+
+  try {
+    fileIn.clear();
+    fileIn.seekg(0, std::ios::beg);
+    if (compact) {
+      j = j.from_cbor(fileIn);
+    } else {
+      j = nlohmann::json::parse(fileIn);
+    }
+  } catch (nlohmann::json::exception &e) {
+    fileIn.close();
+    LOG_ERROR("Can't parse json file \"%ls\" Compact: \"%s\": %s", path.c_str(),
+              (compact ? "True" : "False"), e.what());
+    return t_jsonpack{};
+  }
+
+  fileIn.close();
+
+  for (auto &jsonGroup : j.items()) {
+    out[jsonGroup.key()] = jsonGroup.value();
+  }
+
+  return out;
+}
+
+nlohmann::json file_read_save_info(const std::wstring &fileName, bool compact)
+{
+  std::ifstream fileIn;
+  std::wstring path = L"saves/" + fileName + L"_info.json";
+  fileIn.open(std::filesystem::path(path));
+
+  nlohmann::json j;
+  if (!fileIn.is_open()) return j;
+
+  try {
+    if (compact) 
+      j = nlohmann::json::from_cbor(fileIn);
+    else 
+      fileIn >> j;
+  } 
+  catch (nlohmann::json::exception &e) {
+    LOG_ERROR("Can't parse info json file \"%ls\"", path.c_str());
+  }
+  fileIn.close();
+
+  return j;
 }
 
 #undef QUICK_FIND

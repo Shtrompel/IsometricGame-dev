@@ -100,6 +100,14 @@ struct GameWindow
 	{
 	}
 
+	virtual void keyboard_pressed(sf::Keyboard::Key key)
+	{
+	}
+
+	virtual void keyboard_released(sf::Keyboard::Key key)
+	{
+	}
+
 	virtual void on_focus()
 	{
 	}

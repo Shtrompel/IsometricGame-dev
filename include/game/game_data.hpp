@@ -100,6 +100,20 @@ struct BodyQueueData
 	GameBody *target = nullptr;
 	t_alignment alignment = ALIGNMENT_NONE;
 	BuildingBase *home = nullptr;
+
+	std::string to_string()
+	{
+		std::string out;
+		char buffer[1024];
+    	snprintf(
+			buffer, sizeof(buffer), 
+			"{ Pos: %s, Vel: %s, Dif: %s "
+			"Target Pos: %s, Alignment: %d, Home Pos: %s }",
+			vec_str(pos).c_str(), vec_str(vel).c_str(), vec_str(dif).c_str(), 
+			target ? vec_str(target->pos).c_str() : "none",
+			(int)alignment, home ? vec_str(home->tilePos).c_str() : "none");
+		return std::string(buffer);
+	}
 };
 
 /*
@@ -410,6 +424,8 @@ struct GameData : public Variant
 	t_bbuilds_itr<BuildingBase *> delete_building(const sf::Vector2i &pos);
 
 	bool confirm_building_base(BuildingBase *build);
+
+	bool connect_building_network(BuildingBase *build);
 
 	BuildingBase *add_building(
 		const BuildingQueueData &queue,

@@ -27,6 +27,31 @@
 			"alignment": "ENEMY",
 			"type_str": "BulletType::ENEMY_BULLET_HOMING",
 			"bools": "{SPECTRAL}"
+        },
+        {
+            "id": 7,
+			"parent": 0,
+			"alignment": "FRIENDLY",
+			"life_span": 10.0,
+			"type_str": "BulletType::TOWER_BULLET_BASIC"
+        },
+        {
+            "id": 8,
+			"parent": 0,
+			"alignment": "FRIENDLY",
+			"life_span": 10.0,
+			"damage": 2.0,
+			"type_str": "BulletType::TOWER_BULLET_BETTER"
+        },
+        {
+            "id": 9,
+			"parent": 0,
+			"alignment": "FRIENDLY",
+			"damage": 4.0,
+			"max_speed": 5.0,
+            "max_force": 3.0,
+			"type_str": "BulletType::TOWER_BULLET_HOMING",
+			"bools": "{HOMING}"
         }
     ]
 }

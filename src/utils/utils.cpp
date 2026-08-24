@@ -49,7 +49,7 @@ std::string str_unfold(const std::string &str)
 	return ret;
 }
 
-int str_to_int(std::string &str)
+int str_to_int(const std::string &str)
 {
 	char *p;
 	long val = strtol(str.c_str(), &p, 10);

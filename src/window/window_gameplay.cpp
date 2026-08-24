@@ -10,6 +10,7 @@
 #include "game/power_network.hpp"
 #include <cstdlib> // wcstombs_s
 #include <utility>
+#include <execution>
 
 extern t_jsonpack file_read_jsonpack(const std::wstring &fileName, bool compact);
 extern std::map<int, std::wstring> list_saved_games();
@@ -87,7 +88,8 @@ void depth_sort(std::vector<GameBody *> &renderQueue,
 
   for (auto &body : bodies)
   {
-    renderQueue.push_back(body);
+    if (!body->dead)
+      renderQueue.push_back(body);
   }
 
   std::sort(renderQueue.begin(), renderQueue.end(),
@@ -388,10 +390,10 @@ bool WindowGameplay::load()
   return true;
 }
 
-bool WindowGameplay::loadTest()
+bool WindowGameplay::run_test_generator(int testId)
 {
   Chunks *chunksPtr = &chunks;
-  auto generateChunks = [&chunksPtr](int radius)
+  const auto generateChunks = [&chunksPtr](int radius)
   {
     // Initialize grid chunks
     int areaWidth = radius * 2 + 1;
@@ -403,27 +405,7 @@ bool WindowGameplay::loadTest()
     }
   };
 
-  if (0)
-  {
-    bool success;
-    t_idpair pair = data.mapEnumTree.get_id("Park", &success);
-    if (!success)
-    {
-      assert(0);
-    }
-    UpgradeTree *step = nullptr;
-    step = dynamic_cast<UpgradeTree *>(
-        data.bodyConfigMap.at(pair.group, pair.id)[0]);
-    for (auto &x : step->spriteHolders)
-    {
-      auto a = assets.get_sprite(x.second)->get(0);
-      assert(a);
-      (void)a->getTexture().copyToImage().saveToFile("toto.png");
-    }
-  }
-
-  const auto autoAddResources = [this](int ores = 20, int gems = 6,
-                                       int radius = 32)
+  const auto autoAddResources = [this](int ores = 20, int gems = 6, int radius = 32)
   {
     BuildingBase *b = nullptr;
     Logger::set_priority(0);
@@ -456,253 +438,22 @@ bool WindowGameplay::loadTest()
     Logger::set_priority(99);
   };
 
-  // Tests
   LOG("\tTest start");
 
   this->saveCtx.enableSaving = true;
 
-  static const int TEST_NOTHING = 7;
-  static const int TEST_MAZE = 0;
-  static const int TEST_FIGHTERS = 1;
-  static const int TEST_PATHFIND = 2;
-  static const int TEST_SYSTEM2 = 4;
-  static const int TEST_GAME = 5;
-  static const int TEST_MINIMUM = 8;
-  static const int TEST_ENEMY = 9;
-  static const int TEST_BULLETS = 10;
-  static const int TEST_MASS_PATHFIND = 11;
-  static const int TEST_SHOOTING = 12;
-  static const int TESTS_COUNT = 13;
+  // Map test IDs directly to their execution lambdas
+  std::unordered_map<int, std::function<void(void)>> tests;
 
-  int selected = TEST_SHOOTING;
-  std::function<void(void)> tests[TESTS_COUNT];
-  tests[TEST_SHOOTING] = [this, &generateChunks, &autoAddResources]()
+  // --- 0: TEST_MAZE ---
+
+  tests[0] = [this, &generateChunks]() {
+
+  };
+
+  tests[1] = [this, &generateChunks]()
   {
     generateChunks(3);
-
-    autoAddResources();
-
-    data.add_building({-3, 0}, BuildingType::HOME, 0);
-    data.add_building({-3, 2}, BuildingType::HOME, 0);
-
-    data.add_building({2, 0}, BuildingType::GENRATOR, 0);
-
-    data.add_building({2, 2}, BuildingType::GENRATOR, 0);
-
-    data.add_building({4, 0}, BuildingType::CAPACITOR, 0);
-
-    BuildingBase *storage =
-        data.add_building({2, -2}, BuildingType::STORAGE, 0);
-    storage->rStorage[Resources::ORE] = 40;
-    storage->rStorage[Resources::GEMS] = 20;
-
-    // focus_on(b->get_center_pos());
-    for (int i = 0; i < 0; ++i)
-    {
-      BuildingBase *b =
-          data.add_building({2 + i * 2, -1}, BuildingType::TOWER, 0);
-      b->alignment = ALIGNMENT_FRIENDLY;
-      if (b->get_upgrades().size())
-        upgrade_building(b, b->get_upgrades().back());
-    }
-
-    for (int i = 0; i < 0; i++)
-    {
-      float x = (float)prng_get_double() * 10.f;
-      float y = (float)prng_get_double() * 10.f;
-      // x = 2, y = 0;
-      auto s1 = data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE);
-      EntityCitizen *e = data.add_entity_citizen({x, y}, s1);
-    }
-
-    for (int i = 0; i < 4; i++)
-    {
-      float x = (float)prng_get_double() * 10.f;
-      float y = (float)prng_get_double() * 5.f + 5;
-      // x = 2, y = 0;
-      auto s1 = data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::HUNTER);
-      EntityEnemy *e = data.add_entity_enemy({x, y}, s1);
-    }
-  };
-
-  tests[TEST_FIGHTERS] = [this, &generateChunks]()
-  {
-    generateChunks(2);
-
-    for (int i = 0; i < 4; ++i)
-      BuildingBase *b =
-          data.add_building({2 + i * 2, -1}, BuildingType::ARMORY, 0);
-
-    for (int i = 0; i < 10; ++i)
-    {
-      {
-        auto s1 =
-            data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE);
-        float x = (float)prng_get_double() * 10.f;
-        float y = (float)prng_get_double() * 5.f + 5;
-        EntityEnemy *e = data.add_entity_enemy({x, y}, s1);
-      }
-      {
-        auto s1 =
-            data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE);
-        float x = (float)prng_get_double() * 10.f;
-        float y = (float)prng_get_double() * 5.f;
-        EntityCitizen *e = data.add_entity_citizen({x, y}, s1);
-      }
-    }
-  };
-
-  tests[TEST_MASS_PATHFIND] = [this, &generateChunks]()
-  {
-    generateChunks(3);
-
-    BuildingBase *b;
-    const int C = 40;
-    for (int y = 0; y < C; ++y)
-    {
-      for (int x = 0; x < C; ++x)
-      {
-        b = data.add_building({x * 2, y * 2}, BuildingType::HOME, 0);
-        assert(b);
-        b->spawn = data.spawn_info_get(
-            SERIALIZABLE_CITIZEN,
-            {(t_group)ENUM_CITIZEN_JOB, (t_id)CitizenJob::TEST01});
-        b->entityLimit = 1;
-        b->actionTimer->set_length(0.01f);
-
-        focus_on((sf::Vector2f)b->get_center_pos());
-      }
-    }
-  };
-
-  tests[TEST_SYSTEM2] = [this, &generateChunks, &autoAddResources]()
-  {
-    generateChunks(3);
-
-    autoAddResources(20, 6, 16);
-
-    bool extended = false;
-    BuildingBase *b;
-
-    b = data.add_building({0, 0}, "MINERS_POST", 0);
-    b->rStoreCap = {0, 0, 0};
-
-
-    b = data.add_building({1, 0}, "HOME", 0);
-
-    b = data.add_building({0, 2}, "STORAGE", 0);
-    b->rStorage[Resources::ORE] = 0;
-
-    b = data.add_building({0, 4}, "LOGISTICS_CENTER", 0);
-    b = data.add_building({1, 4}, "HOME", 0);
-
-    focus_on((sf::Vector2f)b->tilePos);
-
-    if (extended)
-    {
-      b = data.add_building({0, 6}, "GENERATOR", 0);
-      b->load_upgrade_step(b->get_upgrades().at(0));
-      b = data.add_building({1, 6}, "HOME", 0);
-
-      b = data.add_building({2, 6}, "CAPACITOR", 0);
-    }
-  };
-
-  tests[TEST_BULLETS] = [this, &generateChunks]()
-  {
-    generateChunks(3);
-
-    auto s1 = data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE);
-
-    assert(s1);
-    data.add_entity_enemy({8.f, 8.f}, s1);
-
-    for (int i = 0; i < 9; i++)
-    {
-      if (i == 4)
-        continue;
-
-      UpgradeTree *ut =
-          dynamic_cast<UpgradeTree *>(data.bodyConfigMap.at(
-              ENUM_BUILDING_TYPE, (t_id)BuildingType::WALL)[0]);
-      ut->alignment = ALIGNMENT_ENEMY;
-      BuildingBase *bb =
-          data.add_building(IVec{7 + (i % 3), 7 + (i / 3)}, ut, false);
-    }
-
-    BulletStats *bulletStat = data.get_generic_stats<BulletStats>(
-        ENUM_BULLET_TYPE, (t_id)BulletType::ENEMY_BULLET_01);
-    if (0)
-      for (int i = 0; i < 25; i++)
-      {
-        int x = (i % 5);
-        int y = (i / 5);
-        if (1 <= x && x < 5 && 1 <= y && y < 5)
-          continue;
-        data.add_game_body(SERIALIZABLE_BULLET, bulletStat,
-                           {6.5f + (float)x, 6.5f + (float)y});
-      }
-
-    focus_on({8, 8});
-  };
-
-  tests[TEST_ENEMY] = [this, &generateChunks]()
-  {
-    generateChunks(0);
-
-    auto bBuild = data.add_building({5, 5}, BuildingType::HOME, false);
-    bBuild->entityLimit = 5;
-
-    Logger::set_priority(0);
-    for (int x = -2; x <= 2; ++x)
-    {
-      for (int y = -2; y <= 2; ++y)
-      {
-        if (y <= 0 && x == 0)
-          continue;
-        data.add_building({5 + x, 5 + y}, BuildingType::WALL, false);
-      }
-    }
-    Logger::set_priority(99);
-
-    data.add_building({5, 10}, BuildingType::ENEMY_SPAWN, false);
-    focus_on({5, 5});
-  };
-
-  tests[TEST_MINIMUM] = [this, &generateChunks]()
-  {
-    generateChunks(0);
-
-    data.add_building({0, 0}, BuildingType::CAPACITOR, false);
-    data.add_entity_citizen(
-        {1, 1},
-        data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE));
-    focus_on({1, 1});
-  };
-
-  tests[TEST_GAME] = [this, &generateChunks]()
-  {
-    generateChunks(1);
-
-    data.add_building({2, 8}, "HOME", 0);
-
-    data.add_building({3, 2}, "Enemy_Spawn", 0);
-
-    // data.add_entity_enemy({4, 4}, data.get_entity_stats("EnemyType::Brute"));
-  };
-
-  tests[TEST_NOTHING] = [this, &generateChunks]() {
-    generateChunks(0);
-
-    data.add_building({2, 8}, "HOME", 0);
-  };
-
-  // Generate maze from image
-  tests[TEST_MAZE] = [this, &generateChunks]()
-  {
-    generateChunks(1);
-
-    // sf::Vector2i start = { 0, 0 };
     sf::Vector2i end = {7, 17};
     sf::Image mazeImg;
     assert(mazeImg.loadFromFile("assets/maze.png"));
@@ -721,12 +472,16 @@ bool WindowGameplay::loadTest()
           break;
         case 0x0000FFFF:
           b = data.add_building(p, BuildingType::HOME, false);
-          b->entityLimit = 50;
-          b->actionTimer->set_length(0.1f);
+          if (b)
+          {
+            b->entityLimit = 12;
+            b->actionTimer->set_length(0.1f);
+          }
           break;
         case 0xFF0000FF:
-          b = data.add_building(p, BuildingType::GENRATOR, false);
-          b->entityLimit = 50;
+          b = data.add_building(p, BuildingType::GENERATOR, false);
+          if (b)
+            b->entityLimit = 12;
           break;
         case 0xFFFFFFFF:
           end = p;
@@ -743,64 +498,166 @@ bool WindowGameplay::loadTest()
     Logger::set_priority(10);
   };
 
-  // Pathfinding and job test
-  tests[TEST_PATHFIND] = [this, &generateChunks]()
+  // --- 2: RANDOM ENTITIES ---
+  // Drops a chaotic mix of citizens and brutes in an open field
+  tests[2] = [this, &generateChunks]()
   {
-    generateChunks(1);
-    BuildingBase *b = nullptr;
+    generateChunks(3);
 
-    Logger::set_priority(0);
-    // priority = 0;
-    for (int i = 0; i < 0; ++i)
-      b = data.add_building({prng_get_byte() / 16, prng_get_byte() / 16},
-                            BuildingType::ROAD, 0);
-    Logger::set_priority(Logger::LogType::Debug);
+    for (int i = 0; i < 40; ++i)
+    {
+      float x = (float)(prng_get_double() * 24.f - 12.f);
+      float y = (float)(prng_get_double() * 24.f - 12.f);
 
-    // Ore miner
-    b = data.add_building({10, 6}, "HOME", 0);
-    assert(b);
-    b->actionTimer->set_length(0.01f);
-
-    b = data.add_building({11, 11}, BuildingType::RAW_ORE);
-    assert(b);
-    b->rStorage[Resources::ORE] = 15;
-    b = data.add_building({4, 9}, BuildingType::RAW_ORE);
-    assert(b);
-    b->rStorage[Resources::ORE] = 30;
-    b = data.add_building({13, 11}, BuildingType::RAW_ORE);
-    assert(b);
-    b->rStorage[Resources::ORE] = 45;
-
-    b = data.add_building({11, 7}, BuildingType::MINERS_POST, 0);
-    assert(b);
-
-    // Power production
-    b = data.add_building({15, 8}, BuildingType::GENRATOR, 0);
-    assert(b);
-    focus_on((sf::Vector2f)b->tilePos);
-    rotate_world(0);
-
-    b->load_upgrade_step(b->get_upgrades()[0]);
-    b = data.add_building({17, 10}, BuildingType::STORAGE, 0);
-    assert(b);
-    b->rStorage[Resources::ORE] = 20;
-
-    b = data.add_building({16, 9}, BuildingType::CAPACITOR, 0);
-    assert(b);
-    b = data.add_building({17, 11}, "HOME", 0);
-    assert(b);
+      // 25% chance to spawn an enemy, 75% for a citizen
+      if (i % 4 == 0)
+      {
+        auto sEnemy = data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE);
+        data.add_entity_enemy({x, y}, sEnemy);
+      }
+      else
+      {
+        auto sCitizen = data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE);
+        data.add_entity_citizen({x, y}, sCitizen);
+      }
+    }
+    focus_on({0.f, 0.f});
   };
 
-  tests[selected]();
+  // --- 3: RANDOM ---
+  // Fully chaotic map with random resources, buildings, and entities
+  tests[3] = [this, &generateChunks, &autoAddResources]()
+  {
+    generateChunks(4);
+    autoAddResources(40, 15, 20); // High resource density
 
-  // guiButtons["mode delete"].click();
-  // guiButtons["next build"].click();
+    for (int i = 0; i < 25; ++i)
+    {
+      int x = (int)(prng_get_double() * 24 - 12);
+      int y = (int)(prng_get_double() * 24 - 12);
 
-  // postLoad();
+      // Pick a random building type, avoiding EMPTY (0) and LAST
+      int rawType = (int)(prng_get_double() * ((int)BuildingType::LAST - 1)) + 1;
+      BuildingType type = static_cast<BuildingType>(rawType);
+
+      data.add_building({x, y}, type, false);
+    }
+
+    for (int i = 0; i < 20; ++i)
+    {
+      float x = (float)(prng_get_double() * 24.f - 12.f);
+      float y = (float)(prng_get_double() * 24.f - 12.f);
+      auto sCitizen = data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE);
+      data.add_entity_citizen({x, y}, sCitizen);
+    }
+    focus_on({0.f, 0.f});
+  };
+
+  // --- 4: FIGHTING ---
+  // Sets up a functional military outpost besieged by an enemy portal
+  tests[4] = [this, &generateChunks]()
+  {
+    generateChunks(3);
+
+    // Friendly Outpost
+    data.add_building({-3, 0}, BuildingType::HOME, false);
+    data.add_building({-1, 0}, BuildingType::ARMORY, false); // Trains soldiers
+    data.add_building({-1, -2}, BuildingType::TOWER, false); // Watcher support
+    data.add_building({-1, 2}, BuildingType::TOWER, false);
+
+    // The Threat
+    BuildingBase *spawn = data.add_building({8, 0}, BuildingType::ENEMY_SPAWN, false);
+    if (spawn)
+    {
+      spawn->entityLimit = 8;
+    }
+
+    // Pre-spawn some enemies to instigate immediate conflict
+    for (int i = -2; i <= 2; ++i)
+    {
+      auto sEnemy = data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE);
+      data.add_entity_enemy({7.f, (float)i}, sEnemy);
+    }
+
+    focus_on({2.f, 0.f});
+  };
+
+  // --- 5: SYSTEM ---
+  // A complete, self-sustaining resource loop (Mine -> Storage -> Logistics)
+  tests[5] = [this, &generateChunks, &autoAddResources]()
+  {
+    generateChunks(3);
+    autoAddResources(20, 5, 12);
+
+    data.add_building({0, 0}, BuildingType::MINERS_POST, false);
+    data.add_building({-2, 0}, BuildingType::HOME, false); // Miners
+
+    data.add_building({2, 0}, BuildingType::STORAGE, false);
+
+    data.add_building({0, 3}, BuildingType::LOGISTICS_CENTER, false);
+    data.add_building({-2, 3}, BuildingType::HOME, false); // Couriers
+
+    focus_on({0.f, 1.f});
+  };
+
+  // --- 6: GAME SYSTEM ---
+  // Bootstraps a logistics loop alongside a Construction Department
+  tests[6] = [this, &generateChunks, &autoAddResources]()
+  {
+    generateChunks(3);
+    autoAddResources(20, 5, 10);
+
+    // Basic resource loop
+    data.add_building({0, 0}, BuildingType::MINERS_POST, false);
+    data.add_building({0, -2}, BuildingType::HOME, false);
+    data.add_building({2, 0}, BuildingType::STORAGE, false);
+
+    // Construction setup
+    data.add_building({4, 0}, BuildingType::CONSTRUCTION_DEPARTMENT, false);
+    data.add_building({4, -2}, BuildingType::HOME, false); // Builders
+
+    focus_on({2.f, -1.f});
+  };
+
+  // --- 7: ELECTRICITY ---
+  // Tests power generation, storage routing, and consumption via upgrades
+  tests[7] = [this, &generateChunks]()
+  {
+    generateChunks(2);
+
+    // Power generation
+    data.add_building({0, 0}, BuildingType::GENERATOR, false);
+    data.add_building({-12, 0}, BuildingType::HOME, false); // Electricians
+
+    // Power routing and storage
+    data.add_building({2, 0}, BuildingType::CAPACITOR, false);
+
+    // Consumer (A home manually forced into the 'Well Off' upgrade to draw power)
+    BuildingBase *poweredHome = data.add_building({4, 0}, BuildingType::HOME, false);
+    if (poweredHome && poweredHome->get_upgrades().size() > 1)
+    {
+      // Index 1 corresponds to "Well Off Shack" which demands powerIn
+
+      UpgradeTree *ut = poweredHome->get_upgrades()[1];
+      DEBUG("%s", ut->to_string(&data, false).c_str());
+
+      upgrade_building(poweredHome, poweredHome->get_upgrades()[1]);
+    }
+
+    focus_on({2.f, 0.f});
+  };
+
+  // Run the specified test
+  if (tests.count(testId))
+  {
+    tests[testId]();
+  }
+  else
+  {
+    LOG_ERROR("Test ID %d is invalid or not implemented.", testId);
+  }
 
   LOG("\tTest end");
-  LOG("\tInit end");
-
   return true;
 }
 
@@ -891,6 +748,12 @@ bool WindowGameplay::init()
               e.what());
     return false;
   }
+
+  float scaleFactor = managerParent->get_settings().uiScale;
+  gui.setRelativeView(tgui::FloatRect{0.f, 0.f, 1.f / scaleFactor, 1.f / scaleFactor});
+
+  // float scaleFactor = 2.0f; // 200% scaling
+  // gui.setRelativeView({0.f, 0.f, 1.f / scaleFactor, 1.f / scaleFactor});
 
   get_widget<tgui::Button>("ButtonBuild")
       ->onPress(
@@ -1172,10 +1035,7 @@ bool WindowGameplay::init()
 
   list_saved_games();
 
-  if (!loadTest())
-  {
-    return false;
-  }
+  LOG("\tInit end");
 
   return true;
 }
@@ -1204,7 +1064,10 @@ void WindowGameplay::update(float delta)
   // Add all building that pending to be added
   while (changesContext.buildingQueue.size())
   {
-    data.add_building(changesContext.buildingQueue.front());
+    BuildingQueueData bqd;
+    bqd = std::move(changesContext.buildingQueue.front());
+    DEBUG("Changes Contex: %s %s %s", bqd.step->name, bqd.isConstruction ? "True" : "False", bqd.useResources ? "True" : "False");
+    data.add_building(std::move(bqd));
     changesContext.buildingQueue.pop_front();
   }
 
@@ -1231,20 +1094,28 @@ void WindowGameplay::update(float delta)
     // Calculate power networks power values
     if (b->props.bool_is(PropertyBool::POWER_NETWORK) && b->network)
     {
-      auto &network = *b->network;
-      if (b->powerIn)
+      if (b->network)
       {
-        network.powerValue -= b->powerIn;
-        b->sufficient = network.powerValue >= 0;
+        auto &network = *b->network;
+        if (b->powerIn)
+        {
+          network.powerValue -= b->powerIn;
+          b->sufficient = network.powerValue >= 0;
+        }
+
+        if (b->powerStore)
+        {
+          b->powerValue = math_min(network.storeCount, b->powerStore);
+          network.storeCount -= b->powerValue;
+          b->powerValue = math_max(0, b->powerValue);
+
+          resourceContext.power += b->powerValue;
+        }
       }
-
-      if (b->powerStore)
+      else
       {
-        b->powerValue = math_min(network.storeCount, b->powerStore);
-        network.storeCount -= b->powerValue;
-        b->powerValue = math_max(0, b->powerValue);
-
-        resourceContext.power += b->powerValue;
+        // Building is not connected to a network, meaning it's depowered
+        b->sufficient = false;
       }
     }
 
@@ -1269,14 +1140,17 @@ void WindowGameplay::update(float delta)
     if (b->flagDelete)
     {
       // Close building UI if open
-      if (has_build_info(b)) {
+      if (has_build_info(b))
+      {
         show_build_info(b, false);
       }
-      if (selectCtx.buildUpgradeSelected == b) {
+      if (selectCtx.buildUpgradeSelected == b)
+      {
         gui_hide_upgrade_info();
         selectCtx.buildUpgradeSelected = nullptr;
       }
-      if (data.infoBuild == b) {
+      if (data.infoBuild == b)
+      {
         data.infoBuild = nullptr;
       }
 
@@ -1317,13 +1191,15 @@ void WindowGameplay::update(float delta)
 
       if (body->type == BodyType::ENTITY)
       {
-        EntityBody* eb = dynamic_cast<EntityBody *>(body);
-        
+        EntityBody *eb = dynamic_cast<EntityBody *>(body);
+
         // Close entity UI
-        if (has_entity_info(eb)) {
+        if (has_entity_info(eb))
+        {
           show_entity_info(eb, false);
         }
-        if (data.infoEntity == eb) {
+        if (data.infoEntity == eb)
+        {
           data.infoEntity = nullptr;
         }
 
@@ -1600,6 +1476,9 @@ void WindowGameplay::mouse_pressed(const sf::Vector2i &mousePos)
     BuildingBody *body = data.chunks->get_tile(p.x, p.y).building;
     if (body)
     {
+      if (body->base->props.bool_is(PropertyBool::UNREMOVABLE))
+        break;
+      
       this->data.infoBuild = body->base;
       auto pos = body->tilePos;
       if (suggestion.count(pos))
@@ -1750,7 +1629,26 @@ void WindowGameplay::mouse_focus_end(const sf::Vector2i &a,
   grid_change_confirmation(b);
 }
 
-void WindowGameplay::on_focus() { data.timerManager.stop_all(data.get_time()); }
+void WindowGameplay::keyboard_pressed(sf::Keyboard::Key key)
+{
+  if (key == sf::Keyboard::Key::H)
+  {
+    renderer.halfWalls = true;
+  }
+}
+
+void WindowGameplay::keyboard_released(sf::Keyboard::Key key)
+{
+  if (key == sf::Keyboard::Key::H)
+  {
+    renderer.halfWalls = false;
+  }
+}
+
+void WindowGameplay::on_focus()
+{
+  data.timerManager.stop_all(data.get_time());
+}
 
 void WindowGameplay::on_unfocus()
 {
@@ -1761,36 +1659,64 @@ bool WindowGameplay::file_write_jsonpack(const std::wstring &fileName,
                                          const t_jsonpack &jsonPack,
                                          bool compact)
 {
-  nlohmann::json j;
+  nlohmann::json jsonData;
+  nlohmann::json jsonInfo;
+
   for (auto &jsonSingle : jsonPack)
   {
-    j[jsonSingle.first] = jsonSingle.second;
+    if (jsonSingle.first == "info") {
+      jsonInfo = jsonSingle.second;
+    } else {
+      jsonData[jsonSingle.first] = jsonSingle.second;
+    }
   }
 
   std::error_code ec;
   std::filesystem::create_directories("saves", ec);
 
-  std::wstring path = L"saves/" + fileName + L".json";
-  std::ofstream fileOut{std::filesystem::path(path)};
+  std::wstring pathData = L"saves/" + fileName + L".json";
+  std::ofstream fileOutData{std::filesystem::path(pathData)};
 
-  if (!fileOut || fileOut.bad())
+  if (!fileOutData || fileOutData.bad())
   {
 
-    LOG_ERROR("Could not open file at path \"%s\" for writing. Error: %s",
-              path.c_str(), std::strerror(SYSERROR()));
+    LOG_ERROR("Could not open data file at path \"%s\" for writing. Error: %s",
+              pathData.c_str(), std::strerror(SYSERROR()));
     return false;
   }
 
   if (compact)
   {
-    std::vector<std::uint8_t> v = json::to_cbor(j);
-    fileOut.write(reinterpret_cast<char *>(v.data()), v.size());
+    std::vector<std::uint8_t> v = json::to_cbor(jsonData);
+    fileOutData.write(reinterpret_cast<char *>(v.data()), v.size());
   }
   else
   {
-    fileOut << j.dump(4);
+    fileOutData << jsonData.dump(4);
   }
-  fileOut.close();
+  fileOutData.close();
+
+  // Write the info file
+  std::wstring pathInfo = L"saves/" + fileName + L"_info.json";
+  std::ofstream fileOutInfo{std::filesystem::path(pathInfo)};
+
+  if (!fileOutInfo || fileOutInfo.bad())
+  {
+    LOG_ERROR("Could not open info file at path \"%ls\" for writing.", 
+      pathInfo.c_str());
+    return false;
+  }
+
+  if (compact)
+  {
+    std::vector<std::uint8_t> v = nlohmann::json::to_cbor(jsonInfo);
+    fileOutInfo.write(reinterpret_cast<char *>(v.data()), v.size());
+  }
+  else
+  {
+    fileOutInfo << jsonInfo.dump(4);
+  }
+  fileOutInfo.close();
 
   return true;
 }
@@ -1845,8 +1771,8 @@ bool WindowGameplay::jsonpack_to_game(const t_jsonpack &jsonPack)
   std::vector<json> jsons;
 
   std::string jsonFiles[] = {
-    "data", "build_bodies", "build_bases", 
-    "entities", "networks", "bullets"};
+      "data", "build_bodies", "build_bases",
+      "entities", "networks", "bullets"};
   // Containts all serializable variants
   SerializeMap map;
   map.add(SERIALIZABLE_DATA, 0, dynamic_cast<Variant *>(&this->data));
@@ -1931,15 +1857,20 @@ static json &util_getter(json &file, const T &b)
   return file[std::to_string(b->objectType)][std::to_string(b->objectId)];
 }
 
+#undef OLD_JSON_PACK_FROM_GAME
+
+#ifdef OLD_JSON_PACK_FROM_GAME
+
 t_jsonpack WindowGameplay::jsonpack_from_game()
 {
   t_jsonpack out{};
 
   const bool COMPRESSED = false;
 
-  json 
-    jsonBuildBodies, jsonBuildBases, jsonNetworks, 
-    jsonEntities, jsonBullets, jsonChunks, jsonData, jsonOther;
+  json
+      jsonBuildBodies,
+      jsonBuildBases, jsonNetworks,
+      jsonEntities, jsonBullets, jsonChunks, jsonData, jsonOther;
 
   DEBUG("Loading in jsonpack");
 
@@ -1957,14 +1888,6 @@ t_jsonpack WindowGameplay::jsonpack_from_game()
   for (auto &n : data.resourceContext.networks)
     util_getter(jsonNetworks, n) = n->to_json();
   out["networks"] = jsonNetworks;
-
-  /*
-  for (auto &b : data.bodiesContext.entityCitizens)
-          jsonEntities[b->objectType][b->objectId] = b->to_json();
-
-  for (auto &b : data.bodiesContext.entityEnemies)
-          jsonEntities[b->objectType][b->objectId] = b->to_json();
-          */
 
   DEBUG("Enity bodies:");
   for (auto &b : data.bodiesContext.bodies)
@@ -2024,6 +1947,109 @@ t_jsonpack WindowGameplay::jsonpack_from_game()
 
   return out;
 }
+#else
+
+// Gemini's Pro implemenation, uses threading for performance
+t_jsonpack WindowGameplay::jsonpack_from_game()
+{
+  t_jsonpack out{};
+  const bool COMPRESSED = false;
+
+  json jsonBuildBodies = json::array();
+  json jsonBuildBases = json::array();
+  json jsonEntities = json::array();
+  json jsonBullets = json::array();
+  json jsonNetworks = json::array();
+  json jsonChunks, jsonData, jsonOther;
+
+  // --- 1. Flatten Pointers ---
+  std::vector<BuildingBody*> flatBuildBodies;
+  for (auto& b : data.bodiesContext.buildings) {
+      if (b.is_valid()) flatBuildBodies.push_back(b.get());
+  }
+
+  std::vector<BuildingBase*> flatBuildBases;
+  for (auto& b : data.bodiesContext.buildingBases) {
+      if (b) flatBuildBases.push_back(b);
+  }
+
+  std::vector<EntityBody*> flatEntities;
+  std::vector<BulletBody*> flatBullets;
+  for (auto& b : data.bodiesContext.bodies) {
+      if (!b) continue;
+      if (b->type == BodyType::ENTITY) flatEntities.push_back(dynamic_cast<EntityBody*>(b));
+      else if (b->type == BodyType::BULLET) flatBullets.push_back(dynamic_cast<BulletBody*>(b));
+  }
+
+  // --- 2. Pre-allocate Output Vectors ---
+  std::vector<json> parBuildBodies(flatBuildBodies.size());
+  std::vector<json> parBuildBases(flatBuildBases.size());
+  std::vector<json> parEntities(flatEntities.size());
+  std::vector<json> parBullets(flatBullets.size());
+
+  // --- 3. Execute Parallel Transformations ---
+  std::transform(std::execution::par_unseq, 
+                 flatBuildBodies.begin(), flatBuildBodies.end(), 
+                 parBuildBodies.begin(), 
+                 [](BuildingBody* b) { return b->to_json(); });
+
+  std::transform(std::execution::par_unseq, 
+                 flatBuildBases.begin(), flatBuildBases.end(), 
+                 parBuildBases.begin(), 
+                 [](BuildingBase* b) { return b->to_json(); });
+
+  std::transform(std::execution::par_unseq, 
+                 flatEntities.begin(), flatEntities.end(), 
+                 parEntities.begin(), 
+                 [](EntityBody* b) { return b->to_json(); });
+
+  std::transform(std::execution::par_unseq, 
+                 flatBullets.begin(), flatBullets.end(), 
+                 parBullets.begin(), 
+                 [](BulletBody* b) { return b->to_json(); });
+
+  // --- 4. Assign Results ---
+  out["build_bodies"] = parBuildBodies;
+  out["build_bases"] = parBuildBases;
+  out["entities"] = parEntities;
+  out["bullets"] = parBullets;
+
+  // ... Existing sequential code for networks, chunks, constructions, and info ...
+  
+  for (auto &n : data.resourceContext.networks)
+    jsonNetworks.push_back(n->to_json());
+  out["networks"] = jsonNetworks;
+
+  jsonChunks[std::to_string(chunks.objectType)][std::to_string(chunks.objectId)] = chunks.to_json();
+  out["chunks"] = jsonChunks;
+
+  out["data"] = jsonData;
+
+  jsonOther[0] = renderer.orientation;
+  jsonOther[1] = data.constructions.to_json();
+  out["other"] = jsonOther;
+
+  json jsonInfo;
+  {
+    jsonInfo["citizens"] = data.bodiesContext.entityCitizens.size();
+    jsonInfo["scenario"] = saveCtx.scenarioName;
+
+    time_t curr_time;
+    tm *curr_tm;
+    char date_string[100];
+    std::time(&curr_time);
+    curr_tm = localtime(&curr_time);
+    strftime(date_string, 50, "%T %B %d, %Y", curr_tm);
+
+    jsonInfo["date"] = date_string;
+    jsonInfo["dateInt"] = curr_time;
+  }
+  out["info"] = jsonInfo;
+
+  return out;
+}
+#endif
+
 
 void WindowGameplay::popup_confirmation_window(PopupConfirmationData *data)
 {
@@ -2178,19 +2204,23 @@ bool WindowGameplay::gui_update_upgrade_info(UpgradeTree *info,
 
   if (info->spriteHolders.size())
   {
-    t_sprite s = info->spriteHolders.at(IVec{0, 0});
+    IVec start, end;
+    upgrade_building_get_frames(build, info, start, end);
+    int s = assets.load_sprites(build->tree->image, start, end);
+
     if (s != -1)
     {
-      sf::Sprite *sprite;
-      auto sprites = renderer.assets->get_sprite(s);
-      sprite = sprites->get(0);
+      sf::Sprite *sprite = assets.get_sprite(s)->get(0);
 
-      tgui::UIntRect rect;
-      sf::FloatRect fr = sprite->getLocalBounds();
-      rect = {(unsigned)fr.position.x, (unsigned)fr.position.y,
-              (unsigned)fr.size.x, (unsigned)fr.size.y};
+      // Use getTextureRect() to get the actual sprite coordinates on the sheet
+      sf::IntRect ir = sprite->getTextureRect();
+      tgui::UIntRect rect = {(unsigned)ir.position.x, (unsigned)ir.position.y,
+                             (unsigned)ir.size.x, (unsigned)ir.size.y};
+
       tgui::Texture tex;
-      tex.loadFromPixelData(rect.getSize(), sprite->getTexture().copyToImage().getPixelsPtr());
+      sf::Image image = sprite->getTexture().copyToImage();
+      tex.loadFromPixelData({image.getSize().x, image.getSize().y}, image.getPixelsPtr(), rect);
+
       get_widget<tgui::Picture>(newWindow, "PictureUpgradeWindow")
           ->getRenderer()
           ->setTexture(tex);
@@ -2330,40 +2360,42 @@ bool WindowGameplay::gui_show_upgrade_info(BuildingBase *build)
         ->setText(build->get_format_name());
   }
 
-  get_widget<tgui::Button>("ButtonUpgradePrev")
-      ->onClick(
-          [](WindowGameplay *window, BuildingBase *build)
-          {
-            SelectionGameContext *selection = &window->selectCtx;
+  auto btnPrev = get_widget<tgui::Button>("ButtonUpgradePrev");
+  btnPrev->onClick.disconnectAll();
+  btnPrev->onClick(
+      [](WindowGameplay *window, BuildingBase *build)
+      {
+        SelectionGameContext *selection = &window->selectCtx;
 
-            if (selection->upgradeTree.empty())
-              return;
-            if (selection->upgradeTreeItr == selection->upgradeTree.begin())
-            {
-              selection->upgradeTreeItr =
-                  std::prev(selection->upgradeTree.end());
-            }
-            else
-              selection->upgradeTreeItr = std::prev(selection->upgradeTreeItr);
-            window->gui_update_upgrade_info(*selection->upgradeTreeItr, build);
-          },
-          this, build);
+        if (selection->upgradeTree.empty())
+          return;
+        if (selection->upgradeTreeItr == selection->upgradeTree.begin())
+        {
+          selection->upgradeTreeItr =
+              std::prev(selection->upgradeTree.end());
+        }
+        else
+          selection->upgradeTreeItr = std::prev(selection->upgradeTreeItr);
+        window->gui_update_upgrade_info(*selection->upgradeTreeItr, build);
+      },
+      this, build);
 
-  get_widget<tgui::Button>("ButtonUpgradeNext")
-      ->onClick(
-          [](WindowGameplay *window, BuildingBase *build)
-          {
-            SelectionGameContext *selection = &window->selectCtx;
-            if (selection->upgradeTree.empty())
-              return;
-            ++selection->upgradeTreeItr;
-            if (selection->upgradeTreeItr == selection->upgradeTree.end())
-            {
-              selection->upgradeTreeItr = selection->upgradeTree.begin();
-            }
-            window->gui_update_upgrade_info(*selection->upgradeTreeItr, build);
-          },
-          this, build);
+  auto btnNext = get_widget<tgui::Button>("ButtonUpgradeNext");
+  btnNext->onClick.disconnectAll();
+  btnNext->onClick(
+      [](WindowGameplay *window, BuildingBase *build)
+      {
+        SelectionGameContext *selection = &window->selectCtx;
+        if (selection->upgradeTree.empty())
+          return;
+        ++selection->upgradeTreeItr;
+        if (selection->upgradeTreeItr == selection->upgradeTree.end())
+        {
+          selection->upgradeTreeItr = selection->upgradeTree.begin();
+        }
+        window->gui_update_upgrade_info(*selection->upgradeTreeItr, build);
+      },
+      this, build);
 
   return true;
 }
@@ -2396,16 +2428,20 @@ bool WindowGameplay::gui_update_constr_build(t_id_config *idConfig,
 
   LOG("%s", config->to_string().c_str());
 
-  get_widget<tgui::Button>(window, "ButtonConstructionConfirm")
-      ->onClick(
-          [](WindowGameplay *gameWindow, t_id_config *config)
-          {
-            LOG("buildSelected has set");
-            gameWindow->selectCtx.buildSelected = *config;
-            gameWindow->gameMode = GameMode::BUILD;
-            gameWindow->gui_change_group("GroupBuild");
-          },
-          this, idConfig);
+  std::shared_ptr<tgui::Button> confirmBtn;
+  confirmBtn = get_widget<tgui::Button>(window, "ButtonConstructionConfirm");
+
+  confirmBtn->onClick.disconnectAll();
+
+  confirmBtn->onClick(
+      [](WindowGameplay *gameWindow, t_id_config *config)
+      {
+        LOG("buildSelected has set");
+        gameWindow->selectCtx.buildSelected = *config;
+        gameWindow->gameMode = GameMode::BUILD;
+        gameWindow->gui_change_group("GroupBuild");
+      },
+      this, idConfig);
 
   return true;
 }
@@ -2435,6 +2471,9 @@ bool WindowGameplay::gui_update_constrs_window()
   {
     UpgradeTree *config = dynamic_cast<UpgradeTree *>(x.second.at(0));
     assert(config);
+
+    if (config->props.bool_is(PropertyBool::HIDDEN))
+      continue;
 
     tgui::Panel::Ptr newPanel = tgui::Panel::copy(panelClone);
     wrap->add(newPanel);
@@ -2562,7 +2601,6 @@ bool WindowGameplay::has_build_info(BuildingBase *infoBuild)
 }
 
 void WindowGameplay::show_build_info(BuildingBase *infoBuild, bool update)
-
 {
   data.infoBuild = infoBuild;
   tgui::ChildWindow::Ptr newWindow;
@@ -2688,12 +2726,16 @@ void WindowGameplay::show_build_info(BuildingBase *infoBuild, bool update)
     }
   }
 
-  if (infoBuild->props.bool_is(PropertyBool::WORKPLACE))
+  if (infoBuild->entityLimit > 0)
   {
-
-    std::string strEntityType = "workers";
+    std::string strEntityType = "entities";
     if (infoBuild->props.bool_is(PropertyBool::HOME))
       strEntityType = "residents";
+    else if (infoBuild->props.bool_is(PropertyBool::WORKPLACE))
+      strEntityType = "workers";
+    else if (infoBuild->alignment == ALIGNMENT_ENEMY)
+      strEntityType = "spawns";
+
     // Add how many resources in the building
     tgui::Label::Ptr label = tgui::Label::create();
     label->setText("Entity " + strEntityType + ": " +
@@ -2887,20 +2929,24 @@ void WindowGameplay::show_entity_info(EntityBody *entity, bool update)
 
   // 1. Generic Entity Stats
   std::string nameStr;
-  if (entity->entityType == EntityType::CITIZEN) {
-      EntityCitizen *citizen = dynamic_cast<EntityCitizen *>(entity);
-      nameStr = str_lowercase(data.enum_get_str(ENUM_CITIZEN_JOB, (t_id)citizen->job, true));
-  } else if (entity->entityType == EntityType::ENEMY) {
-      EntityEnemy *enemy = dynamic_cast<EntityEnemy *>(entity);
-      nameStr = str_lowercase(data.enum_get_str(ENUM_ENEMY_TYPE, (t_id)enemy->enemyType, true));
+  if (entity->entityType == EntityType::CITIZEN)
+  {
+    EntityCitizen *citizen = dynamic_cast<EntityCitizen *>(entity);
+    nameStr = str_lowercase(data.enum_get_str(ENUM_CITIZEN_JOB, (t_id)citizen->job, true));
+  }
+  else if (entity->entityType == EntityType::ENEMY)
+  {
+    EntityEnemy *enemy = dynamic_cast<EntityEnemy *>(entity);
+    nameStr = str_lowercase(data.enum_get_str(ENUM_ENEMY_TYPE, (t_id)enemy->enemyType, true));
   }
   nameStr += " - " + std::to_string((int)entity->objectId);
   get_widget<tgui::Label>(newWindow, "LabelEntityJob")->setText(tgui::String(nameStr));
 
-  auto addLabel = [&](const std::string& text) {
-      tgui::Label::Ptr lbl = tgui::Label::create();
-      lbl->setText(text);
-      layout->add(lbl);
+  auto addLabel = [&](const std::string &text)
+  {
+    tgui::Label::Ptr lbl = tgui::Label::create();
+    lbl->setText(text);
+    layout->add(lbl);
   };
 
   addLabel("HP: " + std::to_string(entity->hp));
@@ -2914,7 +2960,7 @@ void WindowGameplay::show_entity_info(EntityBody *entity, bool update)
   if (strAction.find("#destination") != std::string::npos && entity->pathData.valid())
   {
     BuildingBase *buildDest = entity->pathData.destination->get_building();
-    std::string destStr = buildDest ? (buildDest->get_format_name() + " at " + vec_str(buildDest->tilePos)) 
+    std::string destStr = buildDest ? (buildDest->get_format_name() + " at " + vec_str(buildDest->tilePos))
                                     : ("position " + vec_str(entity->pathData.destPos));
     str_replace(strAction, "#destination", destStr);
   }
@@ -3012,10 +3058,7 @@ void WindowGameplay::grid_change_confirmation(IVec latest)
 }
 
 void WindowGameplay::update_upgrade_info()
-
 {
-  assert(0);
-
   BuildingBase *base = suggestion_build();
   if (!base)
     return;

@@ -6,7 +6,10 @@
 
 #include "window/window_gameplay.hpp"
 #include "window/window_manager.hpp"
+#include "window/window_menu.hpp"
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 
 typedef std::chrono::high_resolution_clock chrono_namespace;
@@ -22,8 +25,34 @@ constexpr int MIN_CLICK_DISTANCE = 16;
 constexpr t_seconds FOCUS_TIME = 0.5f;
 
 
-int game_main()
+int game_main(int argc, char* argv[])
 {
+
+	// Declare the supported options.
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		("help", "produce help message")
+		("test", po::value<std::string>(), "load test by ID (integer) or name (string)")
+	;
+
+	po::variables_map vm;
+	po::store(po::parse_command_line(argc, argv, desc), vm);
+	po::notify(vm);    
+
+
+	if (vm.count("help")) {
+		std::stringstream ss;
+		ss << desc;
+		printf("%s\n", ss.str().c_str());
+		return 1;
+	}
+
+	int testId = -1;
+	if (vm.count("test"))
+	{
+		std::string testStr = vm["test"].as<std::string>();
+		testId = window_gameplay_test_map_str2int(testStr);
+	}
 
 	// Initialize sfml essentials
 	sf::VideoMode videoMode;
@@ -39,7 +68,11 @@ int game_main()
 	// Make a manager for windows
 	WindowManager manager{ &window, &view };
 	manager.windowName = "Isometric Game";
-	manager.init_manager();
+	
+	WindowGameplay* gameWindow = new WindowGameplay();
+	manager.add_window(gameWindow, "GAMEPLAY", true);
+	manager.add_window(new WindowMenu, "MENU");
+		
 	if (!manager.get_current())
 	{
 		LOG_ERROR("No default window set. Exiting!");
@@ -106,6 +139,8 @@ int game_main()
 		manager.set_settings_data(settings);
 	}
 
+
+
 	// Initialize all game windows
 	for (GameWindow* gameWindow : manager.get_windows())
 	{
@@ -116,6 +151,13 @@ int game_main()
 
 		if (!gameWindow->init())
 			return EXIT_FAILURE;
+	}
+
+	// 
+	if (testId != -1)
+	{
+		gameWindow->run_test_generator(testId);
+		manager.change_window(manager.get_window_from_id("GAMEPLAY"));
 	}
 
 	GameWindow* game = manager.get_current();
@@ -165,6 +207,13 @@ int game_main()
 			{
 				if (keyPressed->code == sf::Keyboard::Key::Escape)
 					window.close();
+				
+				game->keyboard_pressed(keyPressed->code);
+			}
+
+			if (const auto* keyPressed = event->getIf<sf::Event::KeyReleased>())
+			{
+				game->keyboard_released(keyPressed->code);
 			}
 
 			if (const auto* scrolled = event->getIf<sf::Event::MouseWheelScrolled>())
@@ -366,7 +415,7 @@ int main(int argc, char* argv[])
 {
 	LOG("Args: %s", array_to_string(argv, argc).c_str());
 
-	game_main();
+	game_main(argc, argv);
 }
 
 #else // ENABLE_GAME

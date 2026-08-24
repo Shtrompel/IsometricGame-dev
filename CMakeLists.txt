@@ -9,6 +9,9 @@ set(CMAKE_BUILD_TYPE Debug)
 add_compile_options(-fsanitize=address -g -fno-omit-frame-pointer)
 add_link_options(-fsanitize=address)
 
+# Find Boost
+find_package(Boost REQUIRED COMPONENTS program_options)
+
 # Find SFML and TGUI
 find_package(SFML COMPONENTS Graphics Window System REQUIRED)
 find_package(TGUI REQUIRED)
@@ -33,6 +36,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Link the required libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    Boost::program_options
     SFML::Graphics
     SFML::Window
     SFML::System

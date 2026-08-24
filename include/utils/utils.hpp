@@ -38,7 +38,7 @@
 
 #define LOOP(var, time) for (size_t var = 0; var < time; ++var)
 
-#define GOT_HERE() printf("Got here %s %d\n", FILE_NAME, __LINE__)
+#define GOT_HERE() printf("Got here %s %d\n", __FILE__, __LINE__)
 
 #define COUNT_OF(arr) (sizeof(arr) / sizeof(*arr))
 
@@ -179,74 +179,6 @@ struct Range
 		return iterator(end, mDiff);
 	}
 };
-/*
-template <typename T, typename OuterIterator, typename InnerIterator>
-struct MapIterator2d
-{
-
-	using iterator_category = std::input_iterator_tag;
-	using value_type = T;
-	using difference_type = long;
-	using pointer = const T*;
-	using reference = T&;
-
-	MapIterator2d(OuterIterator begin, OuterIterator end)
-		: m_begin(begin), m_end(end), m_currentOuter(begin)
-	{
-		if (m_currentOuter != m_end)
-			m_currentInner = m_begin->second.begin();
-		normalize();
-	}
-
-	MapIterator2d(OuterIterator begin, OuterIterator end, InnerIterator innerStart)
-		: m_begin(begin), m_end(end), m_currentOuter(begin), m_currentInner(innerStart)
-	{
-		normalize();
-	}
-
-	MapIterator2d &operator++()
-	{
-		if (m_currentOuter != m_end)
-		{
-			++m_currentInner;
-			normalize();
-		}
-		return *this;
-	}
-
-	typename InnerIterator::value_type &operator*()
-	{
-		return *m_currentInner;
-	}
-
-	bool operator==(const MapIterator2d &other)
-	{
-		return this->m_currentOuter == other.m_currentOuter &&
-			   this->m_currentInner == other.m_currentInner;
-	}
-
-	bool operator!=(const MapIterator2d &other)
-	{
-		return !(*this == other);
-	}
-
-	void normalize()
-	{
-		while (m_currentOuter != m_end &&
-			   m_currentInner == m_currentOuter->second.end())
-		{
-			++m_currentOuter;
-			if (m_currentOuter != m_end)
-				m_currentInner = m_currentOuter->second.begin();
-		}
-	}
-
-	OuterIterator m_begin;
-	OuterIterator m_end;
-	OuterIterator m_currentOuter;
-	InnerIterator m_currentInner;
-};
-*/
 
 template <template<class...> 
 	class Container,
@@ -257,20 +189,6 @@ struct NestedMap
 {
 	typedef Container<TypeSecond, TypeFinal> t_inner;
 	typedef Container<TypeFirst, t_inner> t_outer;
-
-	/*
-	typedef MapIterator2d<
-		TypeFinal,
-		typename t_outer::iterator,
-		typename t_inner::iterator>
-		iterator;
-
-	typedef MapIterator2d<
-		const TypeFinal,
-		typename t_outer::iterator,
-		typename t_inner::iterator>
-		const_iterator;
-	*/
 
 	t_outer data;
 
@@ -501,9 +419,10 @@ static inline void merge_vectors(std::vector<U> &a, const std::vector<U> &b)
 }
 
 // Non‑template functions declared here, defined in utils.cpp
+std::string str_is_integer(std::string& str);
 std::string str_replace(std::string& str, const std::string& from, const std::string& to);
 std::string str_unfold(const std::string &str);
-int str_to_int(std::string &str);
+int str_to_int(const std::string &str);
 sf::Vector2i string_to_ivec(const std::string &str);
 std::string str_enclose(const std::string &str);
 std::string str_unenclose(const std::string &str);

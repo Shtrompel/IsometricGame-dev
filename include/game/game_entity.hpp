@@ -395,6 +395,8 @@ struct EntityCitizen : public EntityBody
 	void logic_reset() override;
 
 	PathData generate_path_worker(const IVec& end);
+
+	void recalculate_worker_stats();
 	
 };
 

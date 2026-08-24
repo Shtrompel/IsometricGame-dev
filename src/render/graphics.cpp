@@ -55,8 +55,7 @@ void RendererClass::render_grid(Chunks *chunks)
 		sf::Vector2i(center.x - size.x / 2.f, center.y - size.y / 2.f),
 		sf::Vector2i(center.x + size.x / 2.f, center.y - size.y / 2.f),
 		sf::Vector2i(center.x + size.x / 2.f, center.y + size.y / 2.f),
-		sf::Vector2i(center.x - size.x / 2.f, center.y + size.y / 2.f)
-	};
+		sf::Vector2i(center.x - size.x / 2.f, center.y + size.y / 2.f)};
 
 	int minTileX = INT_MAX, maxTileX = INT_MIN;
 	int minTileY = INT_MAX, maxTileY = INT_MIN;
@@ -78,7 +77,7 @@ void RendererClass::render_grid(Chunks *chunks)
 	int minChunkY = math_floordiv(minTileY, CHUNK_H) - 1;
 	int maxChunkY = math_floordiv(maxTileY, CHUNK_H) + 1;
 
-	sf::Sprite* grassSprite = assets->get_sprite(spriteGrass)->get(0);
+	sf::Sprite *grassSprite = assets->get_sprite(spriteGrass)->get(0);
 
 	// 4. Iterate only through the visible chunks
 	for (int x = minChunkX; x <= maxChunkX; ++x)
@@ -91,33 +90,35 @@ void RendererClass::render_grid(Chunks *chunks)
 }
 
 // render_object
-FRect RendererClass::render_object(GameBody* body, bool bSearch, ImageAlphaGrid* gridOut)
+FRect RendererClass::render_object(GameBody *body, bool bSearch, ImageAlphaGrid *gridOut)
 {
-	
+	if (!body->visible || body->dead) 
+        return {};
+
 	if (!body->visible)
-		return{};
+		return {};
 
 	FVec bodyPos = body->pos;
 	bodyPos.y -= body->z;
-	
+
 	sf::Vector2i pos = world_pos_to_screen_pos(
 		bodyPos,
 		orientation);
 
 	if (!vec_inside<float>(
-		(sf::Vector2f)pos,
-		0,
-		0,
-		view->getSize().x,
-		view->getSize().y))
+			(sf::Vector2f)pos,
+			0,
+			0,
+			view->getSize().x,
+			view->getSize().y))
 	{
-		return{};
+		return {};
 	}
-	
+
 	t_sprite spriteHolder;
 	if (body->type == BodyType::BUILDING)
 	{
-		BuildingBody* building = dynamic_cast<BuildingBody*>(body);
+		BuildingBody *building = dynamic_cast<BuildingBody *>(body);
 		assert(building);
 
 		spriteHolder = building->get_sprite(orientation.rotation);
@@ -128,17 +129,17 @@ FRect RendererClass::render_object(GameBody* body, bool bSearch, ImageAlphaGrid*
 	}
 
 	if (spriteHolder == -1)
-		return{};
+		return {};
 
-	AssetSprites* sprites = assets
-		->get_sprite(spriteHolder);
+	AssetSprites *sprites = assets
+								->get_sprite(spriteHolder);
 
-	sf::Sprite* sTile;
+	sf::Sprite *sTile;
 	size_t spriteId;
 	if (body->type == BodyType::BULLET)
 	{
-		BulletBody* bullet;
-		bullet = dynamic_cast<BulletBody*>(body);
+		BulletBody *bullet;
+		bullet = dynamic_cast<BulletBody *>(body);
 		assert(bullet);
 
 		spriteId = (size_t)bullet->get_direction_frame(orientation.rotation);
@@ -154,7 +155,6 @@ FRect RendererClass::render_object(GameBody* body, bool bSearch, ImageAlphaGrid*
 
 	// IVec textureSize = sprites->spriteSize;
 
-
 	TextureOrigin texOrigin = TextureOrigin::BOTTOM;
 	switch (body->type)
 	{
@@ -168,29 +168,44 @@ FRect RendererClass::render_object(GameBody* body, bool bSearch, ImageAlphaGrid*
 	FVec posOut;
 	if (sTile)
 	{
+		sf::Color oldColor = sTile->getColor();
+
+		if (halfWalls && body->type == BodyType::BUILDING)
+		{
+			BuildingBody *b = dynamic_cast<BuildingBody *>(body);
+			if (b && b->base->buildType == (t_id)BuildingType::WALL)
+			{
+				sf::Color c = oldColor;
+				c.a = 64;
+				sTile->setColor(c);
+			}
+		}
+
 		posOut = sub_render(
 			pos,
 			orientation.scale,
 			*sTile,
 			texOrigin);
+
+		// Reset the color
+		sTile->setColor(oldColor);
 	}
 
 	if (body->type == BodyType::ENTITY && drawPath)
 	{
-		EntityBody* entity = dynamic_cast<EntityBody*>(body);
+		EntityBody *entity = dynamic_cast<EntityBody *>(body);
 		assert(entity);
-		sub_render_draw(entity->pathData, { 1.f, 1.f });
+		sub_render_draw(entity->pathData, {1.f, 1.f});
 	}
 
 	if (bSearch)
 	{
 		FVec size = orientation.scale * sprites->spriteSize;
-		return{
+		return {
 			(FVec)posOut,
-			size };
+			size};
 	}
 	return {};
-
 }
 
 // render_influence_area (overload for UpgradeTree)
@@ -200,29 +215,27 @@ void RendererClass::render_influence_area(
 {
 	render_influence_area_generic(
 		suggestionBuilds,
-		[&buildTree]( sf::Vector2i& tilePos, sf::Vector2i& buildSize, float& radius, const sf::Vector2i& item)
+		[&buildTree](sf::Vector2i &tilePos, sf::Vector2i &buildSize, float &radius, const sf::Vector2i &item)
 		{
 			buildSize = buildTree->size;
 			radius = buildTree->effectRadius;
 			tilePos = item;
-		}
-	);
+		});
 }
 
 // render_influence_area (overload for selectedBuildings)
 void RendererClass::render_influence_area(
-	const std::unordered_map<size_t, BuildingBase*>& selectedBuildings)
+	const std::unordered_map<size_t, BuildingBase *> &selectedBuildings)
 {
 	render_influence_area_generic(
 		selectedBuildings,
-		[]( sf::Vector2i& tilePos, sf::Vector2i& buildSize, float& radius, const std::pair<size_t, BuildingBase*>& item)
+		[](sf::Vector2i &tilePos, sf::Vector2i &buildSize, float &radius, const std::pair<size_t, BuildingBase *> &item)
 		{
-			BuildingBase* build = item.second;
+			BuildingBase *build = item.second;
 			radius = build->effectRadius;
 			buildSize = build->tilesSize;
 			tilePos = build->tilePos;
-		}
-	);
+		});
 }
 
 // render_suggestion
@@ -240,7 +253,7 @@ void RendererClass::render_suggestion(
 	if (gameMode == GameMode::BUILD && buildTree)
 	{
 		render_influence_area(buildTree, suggestionBuilds);
-		
+
 		for (auto itr = suggestionBuilds.begin();
 			 itr != suggestionBuilds.end();
 			 ++itr)
@@ -281,10 +294,10 @@ void RendererClass::render_suggestion(
 
 					if (!sTile)
 						continue;
-					
+
 					float fx = ((orientation.rotation % 2 == 0) ? 1.f : -1.f);
 					sub_render(
-						drawPos, 
+						drawPos,
 						{fx * orientation.scale.x, orientation.scale.y},
 						*sTile,
 						TextureOrigin::BOTTOM);
@@ -313,9 +326,9 @@ void RendererClass::render_suggestion(
 				sIcon = assets->sprites.at(spriteTileSelected)->get(0);
 			}
 			sub_render(
-				drawPos, 
+				drawPos,
 				0.5f * orientation.scale,
-				*sIcon, 
+				*sIcon,
 				TextureOrigin::BOTTOM);
 		}
 	}
@@ -384,8 +397,8 @@ void RendererClass::sub_render_grid(Chunks *chunks, int idx, int idy, sf::Sprite
 
 			// gridDraw2.rotation = WorldRotation::ROT0;
 			bool bMouseTile = tilePos == screen_pos_to_tile_pos(
-												 (sf::Vector2i)view->getCenter(),
-												 orientation);
+											 (sf::Vector2i)view->getCenter(),
+											 orientation);
 			if (bMouseTile)
 				sprite = assets->get_sprite(spriteTileSelected)->get(0);
 			else if ((building && building->base->buildType == (t_id)BuildingType::ROAD))

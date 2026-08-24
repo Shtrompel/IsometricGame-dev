@@ -35,6 +35,31 @@
 
 static const std::string OUT_PATH = "./";
 
+static const std::unordered_map<std::string, int> TEST_MAP_STR2INT = {
+    {"EMPTY",    	0}, // Empty map
+    {"MAZE",      	1}, // Pathfinding Test
+	{"RANDOM ENTITIES",      2}, // Add random entities
+	{"RANDOM", 		3}, 					// Everything's random!
+	{"FIGHTING",  	4}, // Check if entities fight each other properly
+	{"SYSTEM", 	  	5}, // Simple resource systems
+	{"GAME SYSTEM",	6}, // System and builders setup
+	{"ELECTRICTY",  7} // Electricity system
+};
+
+static int window_gameplay_test_map_str2int(const std::string& testStr)
+{
+	int testId = str_to_int(testStr);
+	if (testId != -1)
+		return testId;
+	
+	auto itr = TEST_MAP_STR2INT.find(testStr);
+	if (itr != TEST_MAP_STR2INT.end())
+		return itr->second;
+	
+	return -1;
+}
+
+
 std::vector<UpgradeTree *>
 recursive_get_last_layer_tree(
 	UpgradeTree *step,
@@ -184,10 +209,10 @@ struct WindowGameplay : GameWindow
 	bool
 	init_window(sf::RenderWindow *window, sf::View *view) override;
 
+	bool run_test_generator(int testId);
+
 	bool
 	load() override;
-
-	bool loadTest();
 
 	bool
 	init() override;
@@ -223,6 +248,10 @@ struct WindowGameplay : GameWindow
 	void mouse_focus_end(
 		const sf::Vector2i &a,
 		const sf::Vector2i &b) override;
+	
+	void keyboard_pressed(sf::Keyboard::Key key) override;
+
+	void keyboard_released(sf::Keyboard::Key key) override;
 
 	void on_focus() override;
 

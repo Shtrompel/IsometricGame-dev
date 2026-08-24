@@ -371,7 +371,7 @@ ChildWindow.WindowSettings {
         Value = 0;
     }
 
-    Label.Label1 {
+    Label.LabelUIVolume {
         Position = (2.5%, 5%);
         Renderer = &4;
         Size = (26.83%, 5%);
@@ -380,8 +380,29 @@ ChildWindow.WindowSettings {
         VerticalAlignment = Center;
     }
 
+    Slider.SliderUIScale {
+        ChangeValueOnScroll = true;
+        InvertedDirection = false;
+        Maximum = 200;
+        Minimum = 50;
+        Position = (39.96%, 82.5%);
+        Renderer = &3;
+        Size = (38.61%, 5%);
+        Step = 10;
+        Value = 100;
+    }
+
+    Label.LabelUIScale {
+        Position = (2.5%, 82.5%);
+        Renderer = &4;
+        Size = (139, 5%);
+        Text = "UI Scale (%):";
+        TextSize = 15;
+        VerticalAlignment = Center;
+    }
+
     Button.ButtonConfirm {
-        Position = (70%, 83.95%);
+        Position = (70%, 90%);
         Renderer = &5;
         Size = (25%, 8.98%);
         Text = Confirm;
@@ -389,7 +410,7 @@ ChildWindow.WindowSettings {
     }
 
     Button.ButtonCancel {
-        Position = (5%, 83.95%);
+        Position = (5%, 90%);
         Renderer = &5;
         Size = (25%, 8.98%);
         Text = Cancel;
@@ -397,7 +418,7 @@ ChildWindow.WindowSettings {
     }
 
     Button.ButtonApply {
-        Position = (42.5%, 83.95%);
+        Position = (42.5%, 90%);
         Renderer = &5;
         Size = (25%, 8.98%);
         Text = Apply;

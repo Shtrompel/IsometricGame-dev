@@ -70,6 +70,8 @@ struct GameSettings
 	bool enableVSync = false;
 	SettingsAutosaveInterval interval{};
 
+	float uiScale = 1.0;
+
 	std::string to_string() const
 	{
 		std::stringstream ss;
@@ -140,7 +142,7 @@ public:
 
 	WindowManager(sf::RenderWindow*, sf::View*);
 
-	void init_manager();
+	GameWindow* add_window(GameWindow* window, const std::string& id, bool setCurrent=false);
 
 	GameWindow* get_current();
 

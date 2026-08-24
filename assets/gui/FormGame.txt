@@ -455,6 +455,7 @@ ChildWindow.WindowMenu {
     TitleAlignment = Center;
     TitleButtons = Close;
     TitleTextSize = 13;
+    Visible = false;
 
     VerticalLayout.LayoutMenu {
         Ratios = [1, 1, 1, 1];
@@ -504,7 +505,6 @@ ChildWindow.WindowBuild {
     TitleAlignment = Center;
     TitleButtons = None;
     TitleTextSize = 13;
-    UserData = GroupMain;
     Visible = false;
 
     Button.ButtonBuildBack {
@@ -562,7 +562,6 @@ ChildWindow.WindowUpgrade {
     TitleAlignment = Center;
     TitleButtons = None;
     TitleTextSize = 13;
-    UserData = GroupMain;
     Visible = false;
 
     Picture.PictureUpgradeWindow {
@@ -630,7 +629,6 @@ ChildWindow.WindowEntity {
     TitleAlignment = Center;
     TitleButtons = None;
     TitleTextSize = 13;
-    UserData = GroupMain;
     Visible = false;
 
     Button.ButtonEntityClose {

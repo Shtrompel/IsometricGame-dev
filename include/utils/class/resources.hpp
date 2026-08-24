@@ -176,4 +176,7 @@ struct Resources
 		const Resources &boolResource);
 };
 
+static const Resources NULL_RES = Resources();
+
+
 #endif

@@ -84,6 +84,33 @@ class GameTimer
         }
     }
 
+    int count_times(U time)
+    {
+        if (m_stopped || m_paused)
+            return 0;
+        
+        if (!bInit)
+        {
+            bInit = true;
+            m_start = time;
+            return 1;
+        }
+        
+        if (m_length == (U)0 || m_start == (U)-1)
+            return 0;
+        
+        int passes = (int)((time - m_start) / m_length);
+        
+        if (passes > 0)
+        {
+            // Matches the behavior of next_surplus reducing the surplus 
+            // to 0 and ultimately calling reset(time) on the final pass.
+            reset(time);
+        }
+        
+        return passes;
+    }
+
     U time_passed(U current)
     {
         return current - m_start;

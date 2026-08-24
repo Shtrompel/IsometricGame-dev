@@ -9,6 +9,7 @@
 #include <string>
 
 #include "utils/container/chunked_colony.hpp"
+#include "utils/definitions.hpp"
 #include "nlohmann/json.hpp"
 
 #include <boost/container/stable_vector.hpp>
@@ -26,50 +27,6 @@
 #define EMPTY_TILETREE (t_tiletree{ VEC_LIMIT, POINT_LIMIT })
 
 #define PATHFIND_HEURISTIC_OCTILE
-
-// typedefs
-
-template <typename T>
-using Vec = sf::Vector2<T>;
-using FVec = Vec<float>;
-using DVec = Vec<double>;
-using IVec = Vec<int>;
-using UVec = Vec<unsigned>;
-using LVec = Vec<long>;
-using ULVec = Vec<unsigned long>;
-
-template <typename T>
-struct Rect
-{
-	Vec<T> pos;
-	Vec<T> size;
-};
-
-using FRect = Rect<float>;
-using DRect = Rect<double>;
-using IRect = Rect<int>;
-using URect = Rect<unsigned>;
-using LRect = Rect<long>;
-using ULRect = Rect<unsigned long>;
-
-
-typedef uint8_t t_byte;
-typedef uint16_t t_count;
-typedef t_byte t_material;
-typedef uint32_t t_millis;
-
-typedef int t_sprite;
-typedef float t_seconds;
-typedef unsigned t_use;
-
-typedef size_t t_globalenum;
-typedef size_t t_build_enum;
-typedef size_t t_group;
-typedef size_t t_id;
-typedef size_t t_alignment;
-typedef size_t t_serializable;
-
-using t_jsonpack = std::unordered_map<std::string, nlohmann::json>;
 
 
 enum class GameScreen
@@ -218,282 +175,14 @@ static const std::unordered_map<std::string, int>
 			 (int)ConstantFloating::EMPTY_INVENTORY_PERCENTAGE},
 
 			{"ENABLE_CONSTRUCTIONS",
-			 (int)ConstantBoolean::GOD_MODE},
-			{"EMPTY_INVENTORY_PERCENTAGE",
-			 (int)ConstantBoolean::ENABLE_CONSTRUCTIONS}
+			 (int)ConstantBoolean::ENABLE_CONSTRUCTIONS},
+			 {"GOD_MODE",
+			 (int)ConstantBoolean::GOD_MODE}
 };
 
 
 constexpr int DEBUG_SELECT_BUILDING_SPRITE = -1;
 constexpr const char* DEBUG_SELECT_BUILDING_NAME = "";
-
-constexpr t_group ENUM_NONE						= 0u;
-constexpr t_group ENUM_BODY_TYPE				= 1u;
-constexpr t_group ENUM_ENTITY_TYPE				= 2u;
-constexpr t_group ENUM_ENEMY_TYPE				= 3u;
-constexpr t_group ENUM_CITIZEN_JOB				= 4u;
-constexpr t_group ENUM_BUILDING_TYPE			= 5u;
-constexpr t_group ENUM_PROPERTY_BOOL			= 6u;
-constexpr t_group ENUM_PROPERTY_NUM				= 7u;
-constexpr t_group ENUM_INGAME_PROPERTIES		= 8u;
-constexpr t_group ENUM_ALIGNMENT				= 9u;
-constexpr t_group ENUM_ENTITY_PROPERTY_BOOL		= 10u;
-constexpr t_group ENUM_ENTITY_PROPERTY_NUM		= 11u;
-constexpr t_group ENUM_BULLET_TYPE				= 12u;
-constexpr t_group ENUM_BULLET_PROPERTY_BOOL		= 13u;
-constexpr t_group ENUM_BULLET_PROPERTY_NUM		= 14u;
-constexpr size_t  ENUM_GROUP_COUNT				= 15u;
-
-constexpr t_serializable SERIALIZABLE_NONE			= 0u;
-constexpr t_serializable SERIALIZABLE_NETWORK		= 1u;
-constexpr t_serializable SERIALIZABLE_BUILD_BODY	= 2u;
-constexpr t_serializable SERIALIZABLE_BUILD_BASE	= 3u;
-constexpr t_serializable SERIALIZABLE_PATH			= 4u;
-constexpr t_serializable SERIALIZABLE_ENTITY		= 5u;
-constexpr t_serializable SERIALIZABLE_CITIZEN		= 6u;
-constexpr t_serializable SERIALIZABLE_ENEMY			= 7u;
-constexpr t_serializable SERIALIZABLE_CHUNKS		= 8u;
-constexpr t_serializable SERIALIZABLE_DATA			= 9u;
-constexpr t_serializable SERIALIZABLE_CONSTRUCTION	= 10u;
-constexpr t_serializable SERIALIZABLE_RENDERER		= 11u;
-constexpr t_serializable SERIALIZABLE_BULLET		= 12u;
-constexpr size_t SERIALIZABLE_ALL				= 13u;
-
-constexpr t_alignment ALIGNMENT_NONE			= 0u;
-constexpr t_alignment ALIGNMENT_NEUTRAL			= 1u;
-constexpr t_alignment ALIGNMENT_FRIENDLY		= 2u;
-constexpr t_alignment ALIGNMENT_ENEMY			= 3u;
-
-/// <summary>
-/// The relation between two objects. Where "None" is
-/// undefined, "NEUTRAL" means both ignore each other
-/// "Friendly" enabled friendly interactions and so "Enemies".
-/// </summary>
-constexpr t_alignment ALIGNMENTS_NONE			= 0u;
-constexpr t_alignment ALIGNMENTS_NEUTRAL		= 1u;
-constexpr t_alignment ALIGNMENTS_FRIENDLY		= 2u;
-constexpr t_alignment ALIGNMENTS_ENEMIES		= 3u;
-
-const inline char STR_LOWER_NONE[] = "none";
-
-enum class NoneEnum : t_globalenum
-{
-	NONE = 0,
-	LAST
-};
-
-enum class BodyType : t_globalenum
-{
-	NONE,
-	ALL,
-	BUILDING,
-	ENTITY,
-	BULLET,
-	PARTICLE,
-	LAST
-};
-
-enum class EntityType : t_globalenum
-{
-	NONE,
-	CITIZEN,
-	ENEMY,
-	LAST
-};
-
-enum class EnemyType : t_globalenum
-{
-	NONE,
-	BRUTE,
-	HUNTER,
-	LAST
-};
-
-using EntityEnemyType = EnemyType;
-
-enum class CitizenJob : t_globalenum
-{
-	NONE,
-	BUILDER,
-	COURIER,
-	MINER,
-	GATHERER,
-	ELECTRICIAN,
-	MAKRKSMAN,
-	SOLDIER,
-	RANGER,
-	TANK,
-	HERO,
-	MECHA_BOT,
-	TEST01, // Pathfind test,
-	TOWER_WATCHER,
-	LAST
-};
-
-enum class BuildingType : t_globalenum
-{
-	EMPTY,					 // 0
-	ROAD,					 // 1
-	WALL,					 // 2
-	HOME,					 // 3
-	STORAGE,				 // 4
-	LOGISTICS_CENTER,
-	GENRATOR,				 // 
-	CAPACITOR,				 // 
-	MINE,					 // 
-	MINERS_POST,			 // 
-	TOWER,					 // 
-	ARMORY,					 // 
-	TEMPLE,					 // 
-	GRAVEYARD,				 // 
-	BOMB,					 // 
-	CONSTRUCTION,			 // 
-	CONSTRUCTION_DEPARTMENT, // 
-	BUILDERS_GUILD,			 // 
-	RAW_ORE,				 // 
-	RAW_GEMS,				 // 
-	RAW_BODIES,				 // 
-	RAW_VARIOUS,			 // 
-	PILE_ORE,
-	PILE_GEMS, // 
-	PILE_BODIES,
-	PILE_VARIOUS, // 24
-	ENEMY_SPAWN,  // 25
-	LAST
-};
-
-enum class PropertyBool : t_globalenum
-{
-	NONE,
-	BARRIER,
-	HOME,
-	HARVESTABLE,
-	STORAGE, // Designated storage
-	TMP_STORAGE, // Stores stuff temporarily
-	ANY_STORAGE, // All types of storage
-	INSIDE,
-	WORKPLACE,
-	POWER_NETWORK,
-	HIDDEN,
-	UNREMOVABLE,
-	UNFRIENDLY,
-	FRIENDLY,
-	HITABBLE,
-	OFFENSIVE,
-	LAST
-};
-
-enum class PropertyNum : t_globalenum
-{
-	NONE,
-	SPEED_BONUS,
-	DECAY_AMOUNT,
-	STORAGE_FRAMES,
-	POWER_FRAMES,
-	ENTITY_FRAMES,
-	ACTION_TIME,
-	WORK_EFFICIENCY,
-	PATH_WEIGHT_MULT,
-	LAST
-};
-
-enum class IngameProperties : t_globalenum
-{
-	NONE,
-	NEEDS_WORKERS,
-	LAST
-};
-
-enum class EnumAlignment : t_globalenum
-{
-	NONE,
-	NEUTRAL,
-	FRIENDLY,
-	ENEMY,
-	LAST
-};
-
-enum class EntityPropertyBools: t_globalenum
-{
-	NONE,
-	CAN_PHASE,
-	IGNORE_ENTITIES,
-	IGNORE_BUILDINGS,
-	MELEE, // Entity goes and attacks enemies
-	RANGED, // Entity shoots at entities
-	LAST
-};
-
-enum class EntityPropertyNums : t_globalenum
-{
-	NONE,
-	PATH_WEIGHT_BASE,
-	PATH_WEIGHT_SUB,
-	PATH_COUNT,
-	LAST
-};
-
-enum class BulletType : t_globalenum
-{
-	NONE,
-	DEFAULT,
-	ENEMY_BULLET_01,
-	LAST
-};
-
-enum class BulletPropertyBools : t_globalenum
-{
-	NONE,
-	HOMING,
-	BOUNCING,
-	DESTRUCTIVE,
-	SPECTRAL,
-	LAST
-};
-
-enum class BulletPropertyNums : t_globalenum
-{
-	NONE,
-	LAST
-};
-
-enum class GameMode
-{
-	VIEW,
-	BUILD,
-	DELETE,
-	UPGRADE,
-	DRAW
-};
-
-enum class ShapeType
-{
-	NONE = 0,
-	POINT = 1,
-	RECT = 2,
-	CIRCLE = 3
-};
-
-
-enum class TextureOrigin
-{
-	NONE,
-	CENTERED,
-	BOTTOM,
-	TOP_LEFT,
-	POINT
-};
-
-
-constexpr size_t ENUM_COUNT = (size_t)IngameProperties::LAST;
-
-constexpr size_t COUNT_PROPERTY_NUM =
-	(t_globalenum)PropertyNum::LAST -
-	(t_globalenum)PropertyNum::NONE;
-
-constexpr size_t COUNT_PROPERTY_BOOL =
-	(t_globalenum)PropertyBool::LAST -
-	(t_globalenum)PropertyBool::NONE;
 
 // Constants
 
@@ -554,6 +243,11 @@ constexpr float MIN_FOLLOW_RANGED_DISTANCE = 5.0f;
 
 static const sf::Vector2i DIRECTIONS[8] = {
 	{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
+
+constexpr float NULL_FLOAT = -1.f;
+constexpr int NULL_INT = -1;
+#define NULL_STR ""
+const IVec NULL_IVEC = {-1, -1};
 
 enum BOOL3 : int8_t
 {

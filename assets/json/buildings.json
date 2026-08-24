@@ -75,7 +75,7 @@
                 {
                     "build_name": "{Stronger}_{}",
                     "description": "More hit points",
-                    "hp": 20,
+                    "hp": 25,
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
@@ -95,7 +95,7 @@
                     "id_path": 0,
                     "image": "tile",
                     "image_frames": "2,1-2,1",
-                    "is_obstacle": false,
+                    "is_obstacle": true,
                     "rcost": "0,0,1",
                     "rinput": "0,0,0",
                     "routput": "0,0,0"
@@ -128,7 +128,7 @@
                     "id_parent": 0,
                     "id_path": 0,
                     "image": "home",
-                    "image_frames": "1,_-1,_",
+                    "image_frames": "0,0-0,0",
                     "is_obstacle": true,
                     "rcost": "0,5,0",
                     "rinput": "0,0,0",
@@ -141,7 +141,7 @@
                     "id_parent": 0,
                     "id_path": 1,
                     "image": "home",
-                    "image_frames": "_,1-_,1",
+                    "image_frames": "0,0-0,0",
                     "is_obstacle": true,
                     "powerin": 5,
                     "rcost": "0,3,0"
@@ -155,7 +155,7 @@
                     "id_parent": 1,
                     "id_path": 0,
                     "image": "home",
-                    "image_frames": "2,_-3,_",
+                    "image_frames": "0,0-0,0",
                     "is_obstacle": true,
                     "rcost": "0,0,4"
                 },
@@ -166,7 +166,7 @@
                     "id_parent": 3,
                     "id_path": 0,
                     "image": "home",
-                    "image_frames": "_,2-_,2",
+                    "image_frames": "0,0-0,0",
                     "is_obstacle": true,
                     "powerin": 10,
                     "rcost": "0,0,2"
@@ -177,7 +177,7 @@
         {
             "id": 4,
             "type_str": "STORAGE",
-            "build_name": "{Tiny}_Storage",
+            "build_name": "{Plain}_{Storage}",
             "build_work": 40,
             "description": "Stores everything in high amounts compared to simple storage piles.",
             "hp": 20,
@@ -186,30 +186,56 @@
             "radius_effect": 8,
             "rcost": "20,0,0",
             "rstore": "-1,-1,-1",
+            "weight_cap": 100,
             "upgrades": [
                 {
-                    "build_name": "{Medium}_{}",
-                    "description ": "",
-                    "hp": 0,
+                    "build_name": "{Expanded}_{}",
+                    "description": "Increased storage capacity.",
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
                     "rcost": "30,5,0",
                     "weight_cap": 250
+                },
+                {
+                    "build_name": "{Blood}_{}",
+                    "description": "Massive capacity.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "rcost": "50,15,5",
+                    "weight_cap": 500
+                },
+                {
+                    "build_name": "{}_{Vault}",
+                    "description": "Highly durable storage.",
+                    "hp": 60,
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "rcost": "40,10,0"
+                },
+                {
+                    "build_name": "{}_{Bag}",
+                    "description": "Indestructible and horrifying.",
+                    "hp": 120,
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "rcost": "60,20,10"
                 }
             ],
-            "uses": "{Barrier, Storage}",
-            "weight_cap": 100
+            "uses": "{Barrier, Storage}"
         },
         {
             "id": 5,
             "type_str": "GENERATOR",
-            "build_name": "{Eco Friendly}_{Generator}",
+            "build_name": "{Compact}_{Generator}",
             "build_work": 50,
             "delay_cost": 1,
             "description": "generates power from workers that stay inside",
             "entity_limit": 5,
-            "hp": 5,
+            "hp": 3,
             "image": "generator",
             "image_frames": "0,0-0,0",
             "job": "ELECTRICIAN",
@@ -219,28 +245,51 @@
             "rcost": "10,0,0",
             "rinput": "0,0,0",
             "rstore": "100,0,0",
+            "uses": "{Barrier, Workplace, Inside}",
             "upgrades": [
                 {
-                    "build_name": "{}_{Power Plant}",
-                    "description": "Uses ore as source for power for more power output",
+                    "build_name": "{Safe}_{}",
+                    "description": "More power output.",
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
-                    "image": "generator",
-                    "image_frames": "0,0-0,0",
-                    "powerout": 21,
-                    "rcost": "2,0,0",
-                    "rinput": "1,0,0",
-                    "rstore": "100,0,0",
-                    "uses": "{Barrier, Workplace, Inside}"
+                    "hp": 8,
+                    "rcost": "20,5,0"
+                },
+                {
+                    "build_name": "{Steel Reinforced}_{}",
+                    "description": "Extreme power output.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "hp": 15,
+                    "rcost": "40,10,0"
+                },
+                {
+                    "build_name": "{}_{Power Plant}",
+                    "description": "More power output. Uses ore as source for power.",
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "rcost": "20,5,0",
+                    "rinput": "3,0,0"
+                },
+                {
+                    "build_name": "{}_{Necro-Reactor}",
+                    "description": "High power output. Uses corpses.",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "powerout": 60,
+                    "rcost": "10,20,5",
+                    "rinput": "0,0,1"
                 }
-            ],
-            "uses": "{Barrier, Workplace, Inside}"
+            ]
         },
         {
             "id": 6,
             "type_str": "CAPACITOR",
-            "build_name": "{Faulty}_Power_Vault",
+            "build_name": "{Faulty}_{Power}_{Vault}",
             "build_work": 50,
             "description": "Stores power from nearby generators and transforms the power further away from the generator to other buildings",
             "hp": 5,
@@ -253,12 +302,50 @@
             "rinput": "0,0,0",
             "routput": "0,0,0",
             "rstore": "0,0,0",
-            "uses": "{Barrier, Storage}"
+            "uses": "{Barrier, Storage}",
+            "upgrades": [
+                {
+                    "build_name": "{Reliable}_{}_{}",
+                    "description": "Greatly increases power storage capacity.",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "powerstore": 100,
+                    "rcost": "10,2,0"
+                },
+                {
+                    "build_name": "{Agonizing}_{}_{}",
+                    "description": "Terrifying amounts of stored energy.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "powerstore": 250,
+                    "rcost": "20,5,2"
+                },
+                {
+                    "build_name": "{}_{Conductive}_{}",
+                    "description": "Increases the radius of power distribution.",
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "radius_effect": 16,
+                    "rcost": "10,0,5"
+                },
+                {
+                    "build_name": "{}_{Fleshy}_{}",
+                    "description": "Terrific reach for power distribution.",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "radius_effect": 32,
+                    "rcost": "25,0,10"
+                }
+            ]
         },
         {
             "id": 8,
             "type_str": "MINERS_POST",
-            "build_name": "{Slow}_{Gatherers Post}",
+            "build_name": "{Slow}_{Gatherers}_Post",
             "build_work": 50,
             "description": "Sends miners to mine nearby raw resource piles to store it in storage buildings.",
             "entity_inside": false,
@@ -271,7 +358,47 @@
             "rcost": "15, 0, 0",
             "rstore": "-1,-1,-1",
             "weight_cap": 100,
-            "uses": "{Barrier, Workplace, TMP_STORAGE}"
+            "uses": "{Barrier, Workplace, TMP_STORAGE}",
+            "upgrades": [
+                {
+                    "build_name": "{Active}_{}_{}",
+                    "description": "Increased temporary resource storage capacity.",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "weight_cap": 250,
+                    "rcost": "20,5,0"
+                },
+                {
+                    "build_name": "{Grisly}_{}_{}",
+                    "description": "Greatly expanded storage capacity.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "weight_cap": 600,
+                    "rcost": "40,10,5"
+                },
+                {
+                    "build_name": "{}_{Extractors}_{}",
+                    "description": "Deploys more workers simultaneously.",
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "entity_limit": 8,
+                    "radius_effect": 64,
+                    "rcost": "15,10,0"
+                },
+                {
+                    "build_name": "{}_{Mutilators}_{}",
+                    "description": "Swarms the resources mercilessly.",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "entity_limit": 15,
+                    "radius_effect": 128,
+                    "rcost": "30,15,10"
+                }
+            ]
         },
         {
             "id": 12,
@@ -282,7 +409,7 @@
             "hp": 10,
             "image": "graveyard",
             "image_frames": "0,0-1,1",
-            "properties": "{work_efficiency: 1.0}",
+            "properties": "{work_bonus: 1.0}",
             "uses": "{Barrier}"
         },
         {
@@ -298,7 +425,7 @@
         {
             "id": 15,
             "type_str": "CONSTRUCTION_DEPARTMENT",
-            "build_name": "Construction Department",
+            "build_name": "{}_Construction_{Post}",
             "build_work": 0,
             "description": "Construction department hires citizens to work on construction for new buildings",
             "entity_limit": 5,
@@ -308,7 +435,46 @@
             "job": "BUILDER",
             "properties": "{work_efficiency:5, action_time:0.2}",
             "rbuild": "ore:10",
-            "uses": "{Barrier, Workplace}"
+            "uses": "{Barrier, Workplace}",
+            "upgrades": [
+                {
+                    "build_name": "{}_{}_{Office}",
+                    "description": "More hit points and increased worker capacity.",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "hp": 20,
+                    "entity_limit": 8,
+                    "rcost": "15,5,0"
+                },
+                {
+                    "build_name": "{}_{}_{Department}",
+                    "description": "Horrifyingly durable and holds a massive swarm of workers.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "hp": 50,
+                    "entity_limit": 16,
+                    "rcost": "30,10,5"
+                },
+                {
+                    "build_name": "{Efficient}_{}_{}",
+                    "description": "Increase worker performance.",
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "properties": "{worker}",
+                    "rcost": "10,2,0"
+                },
+                {
+                    "build_name": "{Wartime}_{}_{}",
+                    "description": "A terrifying place to be assigned construction duty. Increases worker's performance.",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "properties": "{work_efficiency:30, action_time:0.1}",
+                    "rcost": "20,5,5"
+                }]
         },
         {
             "id": 17,
@@ -339,7 +505,7 @@
         {
             "id": 20,
             "type_str": "LOGISTICS_CENTER",
-            "build_name": "{Logistics}_{Center}",
+            "build_name": "{Plain}_Logistics_{Hub}",
             "build_work": 50,
             "description": "Sends couriers to move resources into the storage and and send resources into factories.",
             "entity_inside": false,
@@ -350,12 +516,53 @@
             "job": "COURIER",
             "radius_effect": 32,
             "rcost": "15, 0, 0",
-            "uses": "{Barrier, Workplace}"
+            "uses": "{Barrier, Workplace}",
+            "properties": "{worker_storage_ration:1.0}",
+            "upgrades": [
+                {
+                    "build_name": "{Improved}_{}_{}",
+                    "description": "Increases worker amount capacity and operational range.",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "entity_limit": 6,
+                    "radius_effect": 48,
+                    "rcost": "20,5,0"
+                },
+                {
+                    "build_name": "{Visceral}_{}_{}",
+                    "description": "Unnatural reach and a terrifying number of couriers.",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "entity_limit": 12,
+                    "radius_effect": 64,
+                    "rcost": "40,15,5"
+                },
+                {
+                    "build_name": "{}_{}_{Center}",
+                    "description": "Increase worker storage capasity and speed.",
+                    "id_upgrade": 3,
+                    "properties": "{ENTITY_SPEED_RATIO:1.5, ENTITY_ACTION_TIME_RATIO:0.8}",
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "rcost": "10,5,0"
+                },
+                {
+                    "build_name": "{}_{}_{Pit}",
+                    "description": "A gory nexus of logistical torment. Greatly increases worker storage capasity and speed.",
+                    "properties": "{ENTITY_SPEED_RATIO:2.5, ENTITY_ACTION_TIME_RATIO:0.5}",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "rcost": "25,10,10"
+                }
+            ]
         },
         {
             "id": 21,
             "type_str": "ARMORY",
-            "build_name": "{Fighter}_{Armory}",
+            "build_name": "{Warrior's}_{Armory}",
             "build_work": 50,
             "description": "Enable entities to attack enemies.",
             "entity_inside": false,
@@ -364,20 +571,46 @@
             "image": "armory",
             "image_frames": "0,0-0,0",
             "job": "SOLDIER",
-            "radius_effect": 32,
             "rcost": "15, 0, 0",
             "uses": "{Barrier, Workplace}",
             "upgrades": [
                 {
-                    "build_name": "{Ranger}_{}",
-                    "description": "Enables citizens to shoot at enemies",
+                    "build_name": "{}_{Great Armory}",
+                    "description": "Increase entity capacity",
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
-                    "image": "armory",
-                    "image_frames": "1,0-1,0",
-                    "rcost": "2,0,0",
-                    "job": "RANGER"
+                    "hp": 8,
+                    "rcost": "10,15,0"
+                },
+                {
+                    "build_name": "{}_{Slaughterhouse}",
+                    "description": "Greatly increase entity capacity",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "hp": 15,
+                    "rcost": "0,20,10"
+                },
+                {
+                    "build_name": "{Solder's}_{}",
+                    "description": "Increase entity attack and health",
+                    "id_upgrade": 3,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "rcost": "0,25,0",
+                    "powerin": 10,
+                    "properties": "{ENTITY_HP_RATIO:2, ENTITY_ATTACK_RATIO:2}"
+                },
+                {
+                    "build_name": "{Warmongerer's}_{}",
+                    "description": "Increase entity attack and health",
+                    "id_upgrade": 4,
+                    "id_parent": 3,
+                    "id_path": 1,
+                    "rcost": "0,20,10",
+                    "powerin": 40,
+                    "properties": "{ENTITY_HP_RATIO:3, ENTITY_SPEED_RATIO:1.5, ENTITY_ATTACK_RATIO:3}"
                 }
             ]
         },
@@ -385,7 +618,7 @@
             "id": 22,
 			"alignment": "FRIENDLY",
             "type_str": "TOWER",
-            "build_name": "{Tower}",
+            "build_name": "{Watch Tower}",
             "build_work": 50,
             "description": "A tower for entities to shoot arrows at enemies from. Better radius than regular rangers.",
             "entity_inside": true,
@@ -396,9 +629,33 @@
             "job": "TOWER_WATCHER",
             "radius_effect": 32,
             "rcost": "15, 0, 0",
-			"spawn": "SERIALIZABLE_BULLET, BulletType::ENEMY_BULLET_01",
+			"spawn": "SERIALIZABLE_BULLET, BulletType::TOWER_BULLET_BASIC",
             "uses": "{Barrier, Workplace, Inside, OFFENSIVE}",
-			"properties": "{ENTITY_FRAMES:2}"
+			"properties": "{ENTITY_FRAMES:2}",
+			"upgrades": [
+                {
+                    "build_name": "{Guard Tower}",
+                    "description": "Increase bullet strength and tower's reach",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "hp": 12,
+                    "radius_effect": 48,
+                    "spawn": "SERIALIZABLE_BULLET, BulletType::TOWER_BULLET_BETTER",
+                    "rcost": "45,5,0"
+                },
+                {
+                    "build_name": "{Prison Guard Tower}",
+                    "description": "Greatly increase bullet strength and tower's reach",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "hp": 25,
+                    "radius_effect": 64,
+                    "spawn": "SERIALIZABLE_BULLET, BulletType::TOWER_BULLET_HOMING",
+                    "rcost": "0,15,5"
+                }
+                ]
         },
         {
             "id": 25,
@@ -443,6 +700,19 @@
             "uses": "{Barrier}"
         },
         {
+            "id": 26,
+            "type_str": "ENEMY_SPAWN",
+            "alignment": "ENEMY",
+            "build_name": "Enemy_Spawn",
+            "description": "A portal where enemies spawn from.",
+            "hp": -1,
+            "image": "other",
+            "entity_limit": 5,
+            "image_frames": "0,0-0,0",
+            "uses": "{Barrier, Unremovable}",
+            "spawn": "SERIALIZABLE_ENEMY, EnemyType::BRUTE"
+        },
+        {
             "id": 100,
             "build_name": "Park",
             "build_size": "3,3",
@@ -456,7 +726,7 @@
         },
         {
             "type_str": "MINE",
-            "build_name": "{Ore}_Mine",
+            "build_name": "{Ore}_{Mine}",
             "build_work": 50,
             "delay_cost": 1,
             "description": "Citizens go inside and mine ore",
@@ -466,26 +736,51 @@
             "image": "mine",
             "image_frames": "0,0-0,0",
             "job": "MINER",
+            "delay_cost": 2,
             "rcost": "50, 0, 0",
             "rinput": "0,0,0",
             "routput": "4,0,0",
             "rstore": "-1,-1,-1",
+            "weight_cap": 1000,
+            "uses": "{Barrier, Workplace, Inside, Hidden}",
+            "weight_cap": 60,
             "upgrades": [
                 {
                     "build_name": "{Gem}_{}",
-                    "delay_cost": 2,
-                    "description ": "",
-                    "eoutput": "0,1,0",
-                    "hp": 0,
+                    "description ": "Mine gems instead of ore",
+                    "routput": "0,1,0",
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
-                    "rcost": "0,5,0",
-                    "weight_cap": 1000
+                    "rcost": "40,0,0"
+                },
+                {
+                    "build_name": "{}_{Quarry}",
+                    "delay_cost": 0.8,
+                    "description ": "More space for workers, faster mining.",
+                    "hp": 8,
+                    "id_upgrade": 2,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "entity_limit": 5,
+                    "powerin": 10,
+                    "weight_cap": 80,
+                    "rcost": "20,5,0"
+                },
+                {
+                    "build_name": "{}_{Pit}",
+                    "delay_cost": 0.75,
+                    "description ": "Even more space for workers, faster mining.",
+                    "hp": 12,
+                    "id_upgrade": 3,
+                    "id_parent": 2,
+                    "id_path": 1,
+                    "entity_limit": 8,
+                    "powerin": 40,
+                    "weight_cap": 100,
+                    "rcost": "0,15,5"
                 }
-            ],
-            "uses": "{Barrier, Workplace, Inside, Hidden}",
-            "weight_cap": 60
+            ]
         }
     ]
 }

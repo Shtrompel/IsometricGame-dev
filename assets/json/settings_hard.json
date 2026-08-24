@@ -127,7 +127,8 @@
 			"resolution": "640x480",
 			"is_fullscreen": false,
 			"enable_vsync": false,
-			"autosave_interval": "10 minutes"
+			"autosave_interval": "10 minutes",
+			"ui_scaling": 1
 	}
 	
 }

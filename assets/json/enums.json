@@ -115,9 +115,6 @@
             "POWER_NETWORK",
             "HIDDEN",
             "UNREMOVABLE",
-            "UNFRIENDLY",
-            "FRIENDLY",
-            "HITABBLE",
 			"OFFENSIVE"
         ]
     }, {
@@ -132,7 +129,13 @@
 			"ENTITY_FRAMES",
             "ACTION_TIME",
             "WORK_EFFICIENCY",
-            "PATH_WEIGHT_MULT"
+            "PATH_WEIGHT_MULT",
+            "ENTITY_HP_OVERRIDE",
+            "ENTITY_HP_RATIO",
+            "ENTITY_ATTACK_OVERRIDE",
+            "ENTITY_ATTACK_RATIO",
+            "ENTITY_SPEED_RATIO",
+            "ENTITY_ACTION_TIME_RATIO"
         ]
     }, {
         "id": 8,
@@ -179,7 +182,14 @@
         "values": [
             "NONE",
 			"DEFAULT",
-			"ENEMY_BULLET_01"
+			"ENEMY_BULLET_01",
+			"ENEMY_BULLET_HOMING",
+            "HUNTER_BULLET_BASIC",
+            "HUNTER_BULLET_BETTER",
+            "HUNTER_BULLET_BEST",
+            "TOWER_BULLET_BASIC",
+            "TOWER_BULLET_BETTER",
+            "TOWER_BULLET_HOMING"
         ]
     },
 	{

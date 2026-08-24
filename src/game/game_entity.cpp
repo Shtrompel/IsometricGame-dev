@@ -534,6 +534,7 @@ bool EntityBody::search_entity()
 		{
 			BuildingBase *b;
 			b = dynamic_cast<const BuildingBody *>(g)->base;
+			// Buildings can use a propery that makes them more or less liekly to get hit
 			if (b->props.num_is(PropertyNum::PATH_WEIGHT_MULT))
 				multiplier *= (float)b->props.num_get(PropertyNum::PATH_WEIGHT_MULT);
 		}
@@ -548,9 +549,6 @@ bool EntityBody::search_entity()
 			weight = (float)(arg);
 			weight /= logf(weightBase);
 		}
-
-		weight = 1;
-		multiplier = 1;
 
 		float dist = vec_distsq(this->pos, g->pos);
 		dist = dist * weight * multiplier;
@@ -867,8 +865,6 @@ void EntityBody::logic_aggresive()
 				logic_reset();
 				break;
 			}
-
-			DEBUG("%s", target->test_get_str().c_str());
 
 			GameData::damage_body(target, (float)this->attack);
 			if (target->get_hp() <= 0)
@@ -1686,6 +1682,48 @@ PathData EntityCitizen::generate_path_worker(const IVec &end)
 		dijkstra,
 		greed,
 		(workplace && 0 ? workplace->effectRadius : -1.f));
+}
+
+
+void EntityCitizen::recalculate_worker_stats()
+{
+	// This function was made by AI
+
+	bool success = false;
+	EntityStats *baseStats = context->get_entity_stats(ENUM_CITIZEN_JOB, (t_id)this->job, &success);
+	if (!success || !baseStats) return;
+
+	float calcHp = baseStats->hp;
+	float calcAttack = (float)this->attack; // Or baseStats->attack if you add it to EntityStats later
+	float calcSpeed = baseStats->maxSpeed;
+	float calcActionCooldown = baseStats->cooldownAction;
+
+	// 2. Fetch the source building (prioritize workplace, fallback to home)
+	BuildingBase* sourceBuild = this->workplace ? this->workplace.get() : (this->home ? this->home.get() : nullptr);
+
+	if (sourceBuild)
+	{
+		auto& p = sourceBuild->props;
+		typedef PropertyNum PN;
+
+		// Apply Overrides First
+		if (p.num_is(PN::ENTITY_HP_OVERRIDE)) calcHp = (float)p.num_get(PN::ENTITY_HP_OVERRIDE);
+		if (p.num_is(PN::ENTITY_ATTACK_OVERRIDE)) calcAttack = (float)p.num_get(PN::ENTITY_ATTACK_OVERRIDE);
+
+		// Apply Multipliers Second
+		if (p.num_is(PN::ENTITY_HP_RATIO)) calcHp *= (float)p.num_get(PN::ENTITY_HP_RATIO);
+		if (p.num_is(PN::ENTITY_ATTACK_RATIO)) calcAttack *= (float)p.num_get(PN::ENTITY_ATTACK_RATIO);
+		if (p.num_is(PN::ENTITY_SPEED_RATIO)) calcSpeed *= (float)p.num_get(PN::ENTITY_SPEED_RATIO);
+		if (p.num_is(PN::ENTITY_ACTION_TIME_RATIO)) calcActionCooldown *= (float)p.num_get(PN::ENTITY_ACTION_TIME_RATIO);
+	}
+
+	// 3. Apply finalized stats
+	this->hp = (int)calcHp;
+	this->attack = (int)calcAttack;
+	this->maxSpeed = calcSpeed;
+	if (calcActionCooldown > 0.0f) {
+		this->timerAction->set_length(calcActionCooldown);
+	}
 }
 
 void EntityCitizen::logic_reset_worker()

@@ -4,43 +4,11 @@
 #include "game/game_body.hpp"
 #include "game/game_entity.hpp"
 #include "game/power_network.hpp"
+#include "utils/buildin_enums.hpp"
 
 struct GameData;
 
-/*
-[[deprecated]]
-const std::map<std::string, PropertyBool> bool_STRING =
-	{
-		{"NONE", PropertyBool::NONE},
-		{"BARRIER", PropertyBool::BARRIER},
-		{"HOME", PropertyBool::HOME},
-		{"HARVESTABLE", PropertyBool::HARVESTABLE},
-		{"STORAGE", PropertyBool::STORAGE},
-		{"INSIDE", PropertyBool::INSIDE},
-		{"WORKPLACE", PropertyBool::WORKPLACE},
-		{"POWER_NETWORK", PropertyBool::POWER_NETWORK},
-		{"HIDDEN", PropertyBool::HIDDEN},
-		{"UNREMOVABLE", PropertyBool::UNREMOVABLE}};
-
-[[deprecated]]
-const std::map<std::string, CitizenJob> JOB_STRING =
-	{
-		{"NONE", CitizenJob::NONE},
-		{"BUILDER", CitizenJob::BUILDER},
-		{"MINER", CitizenJob::MINER},
-		{"GATHERER", CitizenJob::GATHERER},
-		{"ELECTRICIAN", CitizenJob::ELECTRICIAN},
-		{"MAKRKSMAN", CitizenJob::MAKRKSMAN},
-		{"SOLDIER", CitizenJob::SOLDIER}};
-*/
-
 // Building upgrade tree
-
-constexpr float NULL_FLOAT = -1.f;
-constexpr int NULL_INT = -1;
-#define NULL_STR ""
-const IVec NULL_IVEC = {-1, -1};
-const Resources NULL_RES = Resources();
 
 struct TextureFrames
 {
@@ -268,23 +236,22 @@ struct BuildingBase : BuildingBaseInfo,
 
 	inline void flag_deletion();
 
-	virtual void update();
+	void update();
 
 	// "Hire" citizen to a worker
-	virtual void accept_entity(EntityCitizen *);
+	void accept_entity(EntityCitizen *);
 
 	// Give the worker their job 
-	virtual void accept_entity_job(EntityCitizen*);
+	void accept_entity_job(EntityCitizen*);
 
 	// When a worker comes inside
-	virtual void enter_entity(EntityCitizen *);
+	void enter_entity(EntityCitizen *);
 
 	// When a worker is going outside
-	virtual void exit_entity(EntityCitizen *);
+	void exit_entity(EntityCitizen *);
 
 	// "Fire" the worker back to a jobless citizen
-	virtual std::vector<VariantPtr<EntityBody>>::iterator
-	remove_entity(EntityCitizen *);
+	std::vector<VariantPtr<EntityBody>>::iterator remove_entity(EntityCitizen *);
 };
 
 struct BuildingBody

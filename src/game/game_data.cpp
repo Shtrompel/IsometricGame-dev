@@ -222,14 +222,14 @@ void GameData::clean_world()
 
 	for (GameBody *gb : bodiesContext.bodies)
 	{
-		DEBUG("Deleting GameBody Type: %d, ID: %zu at Address: %p\n", (int)gb->type, gb->objectId, (void*)gb);
+		DEBUG("Deleting GameBody Type: %d, ID: %zu at Address: %p\n", (int)gb->type, gb->objectId, (void *)gb);
 		delete gb;
 	}
 	bodiesContext.bodies.clear();
 
 	for (BuildingBase *bb : bodiesContext.buildingBases)
 	{
-		DEBUG("Deleting BuildingBase Type: %d, ID: %zu at Address: %p\n", (int)bb->buildType, bb->objectId, (void*)bb);
+		DEBUG("Deleting BuildingBase Type: %d, ID: %zu at Address: %p\n", (int)bb->buildType, bb->objectId, (void *)bb);
 		delete bb;
 	}
 	bodiesContext.buildingBases.clear();
@@ -280,14 +280,14 @@ bool GameData::validate_state()
 	{
 		if (!b || b->dead)
 		{
-			DEBUG("Invalid game body state! %s is NULL", (void*)b);
+			DEBUG("Invalid game body state! %s is NULL", (void *)b);
 		}
 
 		if (b->context != this)
 		{
 			DEBUG("Invalid game body state!"
-				" For %s context is different then current context:", 
-				"Expected %p, got %p", (void*)b, b->context, (void*)this);
+				  " For %s context is different then current context:",
+				  "Expected %p, got %p", (void *)b, b->context, (void *)this);
 		}
 
 		// Target Validation
@@ -466,15 +466,21 @@ void GameData::resolve_invalid_state()
 
 	// 1. Resolve PowerNetworks
 	// Remove destroyed or detached buildings from the network's internal lists
-	for (PowerNetwork* net : resourceContext.networks)
+	for (PowerNetwork *net : resourceContext.networks)
 	{
-		if (!net) continue;
+		if (!net)
+			continue;
 
-		auto cleanNetList = [&](std::vector<VariantPtr<BuildingBase>>& list) {
-			for (auto itr = list.begin(); itr != list.end(); ) {
-				if (itr->is_null() || itr->get()->network != net) {
+		auto cleanNetList = [&](std::vector<VariantPtr<BuildingBase>> &list)
+		{
+			for (auto itr = list.begin(); itr != list.end();)
+			{
+				if (itr->is_null() || itr->get()->network != net)
+				{
 					itr = list.erase(itr);
-				} else {
+				}
+				else
+				{
 					++itr;
 				}
 			}
@@ -487,49 +493,64 @@ void GameData::resolve_invalid_state()
 
 	// 2. Resolve Buildings
 	// Evict ghost entities and sever dead network links
-	for (BuildingBase* base : bodiesContext.buildingBases)
+	for (BuildingBase *base : bodiesContext.buildingBases)
 	{
-		if (!base) continue;
+		if (!base)
+			continue;
 
 		// Clean general entities list
-		for (auto itr = base->entities.begin(); itr != base->entities.end(); ) {
-			if (itr->is_null()) {
+		for (auto itr = base->entities.begin(); itr != base->entities.end();)
+		{
+			if (itr->is_null())
+			{
 				itr = base->entities.erase(itr);
 				continue;
 			}
-			EntityCitizen* ec = dynamic_cast<EntityCitizen*>(itr->get());
-			if (!ec || (ec->home != base && ec->workplace != base)) {
+			EntityCitizen *ec = dynamic_cast<EntityCitizen *>(itr->get());
+			if (!ec || (ec->home != base && ec->workplace != base))
+			{
 				itr = base->entities.erase(itr);
-			} else {
+			}
+			else
+			{
 				++itr;
 			}
 		}
 
 		// Clean stored (inside) entities list
-		for (auto itr = base->storedEntities.begin(); itr != base->storedEntities.end(); ) {
-			if (itr->is_null()) {
+		for (auto itr = base->storedEntities.begin(); itr != base->storedEntities.end();)
+		{
+			if (itr->is_null())
+			{
 				itr = base->storedEntities.erase(itr);
 				continue;
 			}
-			EntityCitizen* ec = dynamic_cast<EntityCitizen*>(itr->get());
-			if (!ec || ec->workplace != base || !ec->insideWorkplace) {
+			EntityCitizen *ec = dynamic_cast<EntityCitizen *>(itr->get());
+			if (!ec || ec->workplace != base || !ec->insideWorkplace)
+			{
 				itr = base->storedEntities.erase(itr);
-			} else {
+			}
+			else
+			{
 				++itr;
 			}
 		}
 
 		// Sever broken network links
-		if (base->network) {
-			PowerNetwork* net = base->network;
+		if (base->network)
+		{
+			PowerNetwork *net = base->network;
 			bool found = false;
-			auto checkList = [&](const std::vector<VariantPtr<BuildingBase>>& list) {
+			auto checkList = [&](const std::vector<VariantPtr<BuildingBase>> &list)
+			{
 				return std::find(list.begin(), list.end(), base) != list.end();
 			};
-			if (checkList(net->input) || checkList(net->output) || checkList(net->station)) {
+			if (checkList(net->input) || checkList(net->output) || checkList(net->station))
+			{
 				found = true;
 			}
-			if (!found) {
+			if (!found)
+			{
 				base->network = nullptr;
 			}
 		}
@@ -537,58 +558,75 @@ void GameData::resolve_invalid_state()
 
 	// 3. Resolve GameBodies (Entities)
 	// Fix targeting bugs and evict citizens from destroyed homes
-	for (GameBody* b : bodiesContext.bodies)
+	for (GameBody *b : bodiesContext.bodies)
 	{
-		if (!b) continue;
+		if (!b)
+			continue;
 
 		// Clean followers list
-		for (auto itr = b->followers.begin(); itr != b->followers.end(); ) {
-			if (itr->is_null() || itr->get()->target != b) {
+		for (auto itr = b->followers.begin(); itr != b->followers.end();)
+		{
+			if (itr->is_null() || itr->get()->target != b)
+			{
 				itr = b->followers.erase(itr);
-			} else {
+			}
+			else
+			{
 				++itr;
 			}
 		}
 
 		// Sever broken target links
-		if (b->target) {
-			GameBody* target = b->target;
-			auto& followers = target->followers;
-			if (std::find(followers.begin(), followers.end(), b) == followers.end()) {
+		if (b->target)
+		{
+			GameBody *target = b->target;
+			auto &followers = target->followers;
+			if (std::find(followers.begin(), followers.end(), b) == followers.end())
+			{
 				b->target = nullptr;
 			}
 		}
 
 		// Resolve Citizen specific state
-		if (b->type == BodyType::ENTITY) {
-			EntityBody* eb = dynamic_cast<EntityBody*>(b);
-			if (eb && eb->entityType == EntityType::CITIZEN) {
-				EntityCitizen* ec = dynamic_cast<EntityCitizen*>(eb);
-				
+		if (b->type == BodyType::ENTITY)
+		{
+			EntityBody *eb = dynamic_cast<EntityBody *>(b);
+			if (eb && eb->entityType == EntityType::CITIZEN)
+			{
+				EntityCitizen *ec = dynamic_cast<EntityCitizen *>(eb);
+
 				// Resolve home
-				if (ec->home) {
-					auto& ents = ec->home->entities;
-					if (std::find(ents.begin(), ents.end(), ec) == ents.end()) {
+				if (ec->home)
+				{
+					auto &ents = ec->home->entities;
+					if (std::find(ents.begin(), ents.end(), ec) == ents.end())
+					{
 						ec->home = nullptr;
 					}
 				}
 
 				// Resolve workplace
-				if (ec->workplace) {
-					auto& ents = ec->workplace->entities;
-					if (std::find(ents.begin(), ents.end(), ec) == ents.end()) {
+				if (ec->workplace)
+				{
+					auto &ents = ec->workplace->entities;
+					if (std::find(ents.begin(), ents.end(), ec) == ents.end())
+					{
 						// Evict the worker
 						ec->workplace = nullptr;
 						ec->job = CitizenJob::NONE;
-						
+
 						// If they were stuck "inside" a ghost building, spit them out
-						if (ec->insideWorkplace) {
+						if (ec->insideWorkplace)
+						{
 							ec->insideWorkplace = false;
-							ec->visible = true; 
+							ec->visible = true;
 						}
-					} else if (ec->insideWorkplace) {
-						auto& stored = ec->workplace->storedEntities;
-						if (std::find(stored.begin(), stored.end(), ec) == stored.end()) {
+					}
+					else if (ec->insideWorkplace)
+					{
+						auto &stored = ec->workplace->storedEntities;
+						if (std::find(stored.begin(), stored.end(), ec) == stored.end())
+						{
 							ec->insideWorkplace = false;
 							ec->visible = true;
 						}
@@ -1450,8 +1488,14 @@ bool GameData::confirm_building_base(BuildingBase *build)
 	build->network = nullptr;
 	build->context = this;
 
-	// Assign and update power network (starting from here)
+	// Assign and update power network
+	bool success = connect_building_network(build);
 
+	return success;
+}
+
+bool GameData::connect_building_network(BuildingBase *build)
+{
 	// Network already exists, skip!
 	if (build->network.is_valid())
 	{
@@ -1462,6 +1506,8 @@ bool GameData::confirm_building_base(BuildingBase *build)
 	bool isNetwork = build->props.bool_is(PropertyBool::POWER_NETWORK);
 	if (!isNetwork)
 		return true;
+	
+	Vec<int> pos = build->tilePos;
 
 	// Search for nearest network
 	auto nearest = nearest_buildings_radius_quad(
@@ -1542,34 +1588,10 @@ bool GameData::confirm_building_base(BuildingBase *build)
 			return dist < maxD;
 		});
 
-	/*
 	for (auto &bodyBuild : nearest)
 	{
-		// Merge first network with the second
-		if ((intptr_t)bodyBuild->base->network != (intptr_t)build->network)
-			PowerNetwork::merge(bodyBuild->base->network, build->network);
-		// todo better performance?
-
-		// Replace old network with new one for all buildings
-		for (auto &treeBody : *get_tree(ENUM_PROPERTY_BOOL, (t_id)PropertyBool::POWER_NETWORK))
-		{
-			BuildingBase *base = dynamic_cast<BuildingBody *>(treeBody)->base;
-			if (base->network == build->network)
-				base->network = bodyBuild->base->network;
-		}
-
-		// Remove deleted network from the container
-		*std::find(
-			resourceContext.networks.begin(),
-			resourceContext.networks.end(),
-			build->network) = bodyBuild->base->network;
-	}
-	*/
-
-for (auto &bodyBuild : nearest)
-	{
-		PowerNetwork* oldNetwork = build->network;
-		PowerNetwork* newNetwork = bodyBuild->base->network;
+		PowerNetwork *oldNetwork = build->network;
+		PowerNetwork *newNetwork = bodyBuild->base->network;
 
 		// If they are already part of the same network, skip
 		if (!oldNetwork || !newNetwork || oldNetwork == newNetwork)
@@ -1584,8 +1606,9 @@ for (auto &bodyBuild : nearest)
 			resourceContext.networks.begin(),
 			resourceContext.networks.end(),
 			oldNetwork);
-			
-		if (it != resourceContext.networks.end()) {
+
+		if (it != resourceContext.networks.end())
+		{
 			resourceContext.networks.erase(it);
 			delete oldNetwork; // Prevent memory leak!
 		}
@@ -1797,9 +1820,10 @@ bool GameData::get_free_neighbor(sf::Vector2f &outPos, const FVec &pos)
 		pendingPositions.push_back(x);
 	}
 
+	size_t startIndex = counterContext.genIndex++;
 	for (size_t i = 0; i < pendingPositions.size(); ++i)
 	{
-		sf::Vector2i pos = pendingPositions[(i + counterContext.genIndex++) % pendingPositions.size()];
+		sf::Vector2i pos = pendingPositions[(i + startIndex) % pendingPositions.size()];
 		pos += tilePos;
 
 		if (chunks->has_tile(pos.x, pos.y) &&

@@ -17,6 +17,7 @@ using namespace nlohmann;
 
 #include "utils/class/resources.hpp"
 #include "utils/class/timer.hpp"
+#include "utils/buildin_enums.hpp"
 
 #define PRINT_LINE printf("%d\n", (int)__LINE__)
 
