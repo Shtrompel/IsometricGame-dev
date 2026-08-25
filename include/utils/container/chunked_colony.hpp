@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <bitset>
 
-// Written Completly by AI
+// Slop coded completly by Gemini Pro
 
 template <typename T, size_t S = 256>
 class ChunkedColony {

@@ -117,32 +117,32 @@ enum class CitizenJob : t_globalenum
 enum class BuildingType : t_globalenum
 {
 	EMPTY,					 // 0
-	ROAD,					 // 1
-	WALL,					 // 2
-	HOME,					 // 3
-	STORAGE,				 // 4
+	CONSTRUCTION,	
+	ROAD,
+	WALL,
+	HOME,
+	STORAGE,
 	LOGISTICS_CENTER,
-	GENERATOR,				 // 
-	CAPACITOR,				 // 
-	MINE,					 // 
-	MINERS_POST,			 // 
-	TOWER,					 // 
-	ARMORY,					 // 
-	TEMPLE,					 // 
-	GRAVEYARD,				 // 
-	BOMB,					 // 
-	CONSTRUCTION,			 // 
-	CONSTRUCTION_DEPARTMENT, // 
-	BUILDERS_GUILD,			 // 
-	RAW_ORE,				 // 
-	RAW_GEMS,				 // 
-	RAW_BODIES,				 // 
-	RAW_VARIOUS,			 // 
+	CONSTRUCTION_DEPARTMENT,
+	GENERATOR,			
+	CAPACITOR,			
+	MINE,				
+	MINERS_POST,			
+	TOWER,					
+	ARMORY,					
+	TEMPLE,
+	LIGHT_TRAP,	
+	GRAVEYARD,				
+	BOMB,
+	ENEMY_SPAWN, 
+	RAW_ORE,				
+	RAW_GEMS,				
+	RAW_BODIES,				 
+	RAW_VARIOUS,			 
 	PILE_ORE,
-	PILE_GEMS, // 
+	PILE_GEMS,
 	PILE_BODIES,
-	PILE_VARIOUS, // 24
-	ENEMY_SPAWN,  // 25
+	PILE_VARIOUS,
 	LAST
 };
 

@@ -72,11 +72,13 @@
         "title": "BuildingType",
         "values": [
             "EMPTY",
+            "CONSTRUCTION",
             "ROAD",
             "WALL",
             "HOME",
             "STORAGE",
-			"LOGISTICS_CENTER",
+            "LOGISTICS_CENTER",
+            "CONSTRUCTION_DEPARTMENT",
             "GENERATOR",
             "CAPACITOR",
             "MINE",
@@ -84,11 +86,10 @@
             "TOWER",
             "ARMORY",
             "TEMPLE",
+            "LIGHT_TRAP",
             "GRAVEYARD",
             "BOMB",
-            "CONSTRUCTION",
-            "CONSTRUCTION_DEPARTMENT",
-            "BUILDERS_GUILD",
+            "ENEMY_SPAWN",
             "RAW_ORE",
             "RAW_GEMS",
             "RAW_BODIES",
@@ -96,8 +97,7 @@
             "PILE_ORE",
             "PILE_GEMS",
             "PILE_BODIES",
-            "PILE_VARIOUS",
-            "ENEMY_SPAWN"
+            "PILE_VARIOUS"
         ]
     }, {
         "id": 6,

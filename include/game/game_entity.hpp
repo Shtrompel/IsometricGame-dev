@@ -262,6 +262,8 @@ struct EntityBody : public GameBody
 	
 	bool search_entity();
 
+	void go_to_building(PathData& path);
+
 	int get_hp() const override;
 
 	int& get_hp() override;

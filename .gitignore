@@ -1,0 +1,11 @@
+# Ignore build directory
+build/
+
+# Ignore save files
+saves/
+
+# Ignore log files
+log.txt
+
+# Ignore desktop shortcuts
+*.desktop

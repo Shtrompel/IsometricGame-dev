@@ -656,9 +656,21 @@ bool EntityBody::search_entity()
 		-1.f,
 		props.bool_is(EB::CAN_PHASE));
 
-	set_path(std::move(path));
+	go_to_building(path);
 
 	return true;
+}
+
+void EntityBody::go_to_building(PathData &path)
+{
+	if (path.destination->building)
+	{
+		BuildingBody* bb;
+		bb = static_cast<BuildingBody*>(path.destination->building);
+		this->set_target(bb);
+	}
+	
+	set_path(std::move(path));
 }
 
 int EntityBody::get_hp() const
@@ -1773,7 +1785,7 @@ void EntityCitizen::logic_reset_worker()
 		{
 			nextAction = Action::TRANSFER;
 			rActionBool = inReverse;
-			set_path(std::move(path));
+			go_to_building(path);
 			return;
 		}
 	}
@@ -1814,7 +1826,7 @@ void EntityCitizen::logic_reset_worker()
 				nextAction = Action::COLLECT;
 				rActionBool = workplace->rIn.reverse_bool(
 					&context->resourceContext.weights);
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 		}
@@ -1849,7 +1861,7 @@ void EntityCitizen::logic_reset_worker()
 				// Workplace have resources so just go inside
 				else if (bICanWord)
 					nextAction = Action::WORK;
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 		}
@@ -1883,7 +1895,7 @@ void EntityCitizen::logic_reset_worker()
 				nextAction = Action::COLLECT;
 				rActionBool = workplace->rIn.to_bool();
 
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 		}
@@ -1898,7 +1910,7 @@ void EntityCitizen::logic_reset_worker()
 		{
 			nextAction = Action::WORK;
 
-			set_path(std::move(path));
+			go_to_building(path);
 			return;
 		}
 	}
@@ -1935,8 +1947,8 @@ void EntityCitizen::logic_reset_worker()
 			{
 				nextAction = Action::COLLECT;
 				rActionBool = path.destination->get_building()->rStorage.to_bool();
-
-				set_path(std::move(path));
+				
+				go_to_building(path);
 				return;
 			}
 		}
@@ -1958,7 +1970,7 @@ void EntityCitizen::logic_reset_worker()
 		if (path.valid())
 		{
 			nextAction = Action::BUILD;
-			set_path(std::move(path));
+			go_to_building(path);
 			return;
 		}
 	}
@@ -1991,7 +2003,7 @@ void EntityCitizen::logic_reset_worker()
 			{
 				nextAction = Action::TRANSFER;
 				rActionBool = path.destination->get_building()->rIn;
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 
@@ -2017,7 +2029,7 @@ void EntityCitizen::logic_reset_worker()
 			{
 				nextAction = Action::TRANSFER;
 				rActionBool = Resources::all(1, &context->resourceContext.weights);
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 		}
@@ -2044,7 +2056,7 @@ void EntityCitizen::logic_reset_worker()
 				nextAction = Action::COLLECT;
 				rActionBool = path.destination->get_building()->rStorage.to_bool();
 
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 
@@ -2068,7 +2080,7 @@ void EntityCitizen::logic_reset_worker()
 				nextAction = Action::COLLECT;
 				rActionBool = path.destination->get_building()->rStorage.to_bool();
 
-				set_path(std::move(path));
+				go_to_building(path);
 				return;
 			}
 
