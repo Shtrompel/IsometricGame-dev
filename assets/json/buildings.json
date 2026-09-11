@@ -30,10 +30,11 @@
             "build_name": "{Simple}_Road",
             "build_work": 10,
             "description ": "Makes entities walk faster on it",
-            "hp": 0,
+            "hp": -1,
             "image": "tile",
             "image_frames": "0,1-0,1",
             "properties": "{speed_bonus:1.2}",
+            "uses": "{INDESTRUCTIBLE}",
             "rcost": "5,0,0",
             "rinput": "0,0,0",
             "routput": "0,0,0",
@@ -121,8 +122,10 @@
             "description": "Generates up to 3 citizens every 3 seconds.",
             "entity_limit": 3,
             "hp": 1,
-            "image": "home3",
-            "image_frames": "0,0-0,0",
+            "image": "home",
+            "image_frames": "0,0-2,2",
+            "sprite_axes_x": "{UPGRADE1:3}",
+            "sprite_axes_y": "{UPGRADE0:3}",
             "properties": "{PATH_WEIGHT_MULT: 0.8}",
             "rcost": "10,0,0",
             "rinput": "0,0,0",
@@ -174,7 +177,7 @@
                     "description": "Even faster entity generation",
                     "id_upgrade": 4,
                     "id_parent": 3,
-                    "id_path": 0,
+                    "id_path": 1,
                     "image": "home",
                     "image_frames": "0,0-0,0",
                     "is_obstacle": true,
@@ -335,7 +338,7 @@
                     "id_upgrade": 3,
                     "id_parent": 0,
                     "id_path": 1,
-                    "properties": "{worker}",
+                    "properties": "{work_efficiency:15, action_time:0.15}",
                     "rcost": "10,2,0"
                 },
                 {
@@ -414,10 +417,11 @@
             "build_work": 50,
             "description": "Stores power from nearby generators and transforms the power further away from the generator to other buildings",
             "hp": 5,
-            "image": "capacitor",
-            "image_frames": "0,0-1,1",
+            "image": "battery1",
+            "image_frames": "0,0-2,3",
+            "sprite_axes_x": "{ANIM:3}",
+            "sprite_axes_y": "{FULLNESS:4}",
             "powerstore": 50,
-            "properties": "{power_frames:3}",
             "radius_effect": 8,
             "rcost": "5,0,0",
             "rinput": "0,0,0",
@@ -427,39 +431,27 @@
             "upgrades": [
                 {
                     "build_name": "{Reliable}_{}_{}",
-                    "description": "Greatly increases power storage capacity.",
+                    "description": "Greatly increases power storage capacity. And increases the radius of power distribution.",
                     "id_upgrade": 1,
                     "id_parent": 0,
                     "id_path": 0,
                     "powerstore": 100,
-                    "rcost": "10,2,0"
+                    "radius_effect": 16,
+                    "rcost": "10,2,0",
+                    "image": "battery2",
+                    "image_frames": "0,0-2,3"
                 },
                 {
                     "build_name": "{Agonizing}_{}_{}",
-                    "description": "Terrifying amounts of stored energy.",
+                    "description": "Terrifying amounts of stored energy. And increases the radius of power distribution",
                     "id_upgrade": 2,
                     "id_parent": 1,
                     "id_path": 0,
                     "powerstore": 250,
-                    "rcost": "20,5,2"
-                },
-                {
-                    "build_name": "{}_{Conductive}_{}",
-                    "description": "Increases the radius of power distribution.",
-                    "id_upgrade": 3,
-                    "id_parent": 0,
-                    "id_path": 1,
                     "radius_effect": 16,
-                    "rcost": "10,0,5"
-                },
-                {
-                    "build_name": "{}_{Fleshy}_{}",
-                    "description": "Terrific reach for power distribution.",
-                    "id_upgrade": 4,
-                    "id_parent": 3,
-                    "id_path": 1,
-                    "radius_effect": 32,
-                    "rcost": "25,0,10"
+                    "rcost": "20,5,2",
+                    "image": "battery3",
+                    "image_frames": "0,0-2,3"
                 }
             ]
         },
@@ -468,7 +460,6 @@
             "type_str": "MINE",
             "build_name": "{Ore}_{Mine}",
             "build_work": 50,
-            "delay_cost": 1,
             "description": "Citizens go inside and mine ore",
             "entity_inside": true,
             "entity_limit": 3,
@@ -481,7 +472,6 @@
             "rinput": "0,0,0",
             "routput": "4,0,0",
             "rstore": "-1,-1,-1",
-            "weight_cap": 1000,
             "uses": "{Barrier, Workplace, Inside, Hidden}",
             "weight_cap": 60,
             "upgrades": [
@@ -592,12 +582,12 @@
             "hp": 6,
             "image": "tower",
             "image_frames": "0,0-1,0",
+            "sprite_axes_x": "{OCCUPENT:2}",
             "job": "TOWER_WATCHER",
             "radius_effect": 32,
             "rcost": "15, 0, 0",
 			"spawn": "SERIALIZABLE_BULLET, BulletType::TOWER_BULLET_BASIC",
             "uses": "{Barrier, Workplace, Inside, OFFENSIVE}",
-			"properties": "{ENTITY_FRAMES:2}",
 			"upgrades": [
                 {
                     "build_name": "{Guard Tower}",
@@ -679,19 +669,73 @@
             ]
         },
         {
-            "id": 16,
-            "type_str": "GRAVEYARD",
-            "build_name": "Graveyard",
-            "build_size": "2,2",
-            "description": "Adds a grave each nearby death, every grave slightly increases attack if every citizen.",
-            "hp": 10,
-            "image": "graveyard",
-            "image_frames": "0,0-1,1",
-            "properties": "{work_bonus: 1.0}",
-            "uses": "{Barrier}"
+            "id": 14,
+            "type_str": "ARCHERY",
+            "build_name": "{Archery}",
+            "build_work": 50,
+            "description": "Enable entities to shoot enemies from range.",
+            "entity_inside": false,
+            "entity_limit": 3,
+            "hp": 5,
+            "image": "armory",
+            "image_frames": "1,0-1,0",
+            "job": "RANGER",
+            "rcost": "15, 0, 0",
+            "uses": "{Barrier, Workplace}"
         },
         {
-            "id": 18,
+            "id": 17,
+            "type_str": "GRAVEYARD",
+            "build_name": "{Plain}_{Graveyard}",
+            "build_size": "2,2",
+            "description": "Adds a grave each nearby death, couriers will collect corpes to storage.",
+            "hp": 10,
+            "image": "graveyard1",
+            "image_frames": "0,0-3,3",
+            "sprite_axes_y": "{FULLNESS:4}",
+            "properties": "{work_bonus: 1.0}",
+            "radius_effect": 24,
+            "rstore": "0,0,10",
+            "uses": "{Barrier, TMP_STORAGE, CORPSE_COLLECT_CITIZEN}",
+            "upgrades": [
+                {
+                    "build_name": "{}_{Mass Graveyard}",
+                    "description": "Also collects corpses from fallen enemies",
+                    "image": "graveyard2",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "rcost": "10, 5, 0",
+                    "uses": "{CORPSE_COLLECT_ENEMY}"
+                },
+                {
+                    "build_name": "{Fancy}_{}",
+                    "description": "Increases corpse capacity and collection radius",
+                    "image": "graveyard3",
+                    "id_upgrade": 2,
+                    "id_parent": 0,
+                    "id_path": 1,
+                    "hp": 24,
+                    "radius_effect": 30,
+                    "rstore": "0,0,20",
+                    "rcost": "20, 10, 0"
+                },
+                {
+                    "build_name": "{Haunted}_{}",
+                    "description": "Greatly increases corpse capacity and collection radius",
+                    "id_upgrade": 3,
+                    "id_parent": 2,
+                    "id_path": 1,
+                    "hp": 36,
+                    "radius_effect": 36,
+                    "rstore": "0,0,30",
+                    "rcost": "0, 20, 10"
+                }
+
+            ]
+        },
+        {
+            "id": 19,
             "type_str": "ENEMY_SPAWN",
             "alignment": "ENEMY",
             "build_name": "Enemy_Spawn",
@@ -700,11 +744,11 @@
             "image": "other",
             "entity_limit": 5,
             "image_frames": "0,0-0,0",
-            "uses": "{Barrier, Unremovable}",
-            "spawn": "SERIALIZABLE_ENEMY, EnemyType::BRUTE"
+            "uses": "{Barrier, Unremovable, INDESTRUCTIBLE}",
+            "spawn": "SERIALIZABLE_ENEMY, EnemyType::HUNTER"
         },
         {
-            "id": 19,
+            "id": 20,
             "alignment": "NEUTRAL",
             "type_str": "RAW_ORE",
             "build_name": "Raw_Ore",
@@ -717,7 +761,7 @@
             "uses": "{Barrier, Harvestable, Hidden, Unremovable}"
         },
         {
-            "id": 20,
+            "id": 21,
             "alignment": "NEUTRAL",
             "type_str": "RAW_GEMS",
             "build_name": "Raw_Gems",
@@ -728,6 +772,41 @@
             "properties": "{storage_frames:3}",
             "rstore": "0,15,0",
             "uses": "{Barrier, Harvestable, Hidden, UNREMOVABLE}"
+        },
+        {
+            "id": 22,
+            "type_str": "BOMB",
+            "build_name": "Mine",
+            "build_work": 20,
+            "description": "Explodes when it detects a nearby enemy, or when destroyed.",
+            "hp": 3,
+            "image": "other",
+            "image_frames": "0,0-0,0",
+            "radius_effect": 3,
+            "properties": "{explosion_damage: 6}",
+            "rcost": "15, 0, 0",
+            "uses": "{Barrier, EXPLOSIVE}",
+            "upgrades": [
+                {
+                    "build_name": "{Wide Range}_{}",
+                    "description": "Much larger detection and blast range",
+                    "id_upgrade": 1,
+                    "id_parent": 0,
+                    "id_path": 0,
+                    "radius_effect": 8,
+                    "rcost": "10, 5, 0"
+                },
+                {
+                    "build_name": "{Timed}_{}",
+                    "description": "Explodes on its own shortly after being built",
+                    "id_upgrade": 2,
+                    "id_parent": 1,
+                    "id_path": 0,
+                    "properties": "{explode_delay: 5.0}",
+                    "uses": "{EXPLODE_ON_TIMER}",
+                    "rcost": "10, 5, 0"
+                }
+            ]
         },
         {
             "id": 30,

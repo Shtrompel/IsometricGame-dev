@@ -1,6 +1,11 @@
 {
     "textures": [
         {
+            "count": "4,8",
+            "name": "citizen_walk",
+            "path": "sprites/entities"
+        },
+        {
             "count": "4,2",
             "name": "entity_sprites",
             "path": "sprites/entities"
@@ -26,7 +31,7 @@
             "path": "sprites/entities"
         },
         {
-            "count": "4,3",
+            "count": "3,3",
             "name": "home",
             "path": "sprites/builds"
         },
@@ -63,6 +68,21 @@
         {
             "count": "2,2",
             "name": "capacitor",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "3,4",
+            "name": "battery1",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "3,4",
+            "name": "battery2",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "3,4",
+            "name": "battery3",
             "path": "sprites/builds"
         },
         {
@@ -104,6 +124,21 @@
         {
             "count": "2,1",
             "name": "armory",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "4,4",
+            "name": "graveyard1",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "4,4",
+            "name": "graveyard2",
+            "path": "sprites/builds"
+        },
+        {
+            "count": "4,4",
+            "name": "graveyard3",
             "path": "sprites/builds"
         },
         {

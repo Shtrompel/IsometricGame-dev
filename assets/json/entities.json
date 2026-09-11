@@ -11,14 +11,15 @@
             "max_force": 0.5,
             "frames_walk": "entity 0,0 - 1,0",
             "cooldown_path": 1.0,
-            "cooldown_action": 0.4
+            "cooldown_action": 0.4,
+            "is_light_source": true
         }, {
             "parent": 0,
             "id": 2,
             "type_str": "CitizenJob::None",
 			"hp": 1,
             "image": "entity",
-            "frames_walk": "entity 0,0 - 1,0"
+            "frames_walk": "citizen_walk 0,0 - 3,7"
         }, {
             "parent": 1,
             "id": 3,
