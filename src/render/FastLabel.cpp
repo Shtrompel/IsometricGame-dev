@@ -180,6 +180,11 @@ void FastLabel::setTextSpacing(int spacing)
     this->spacing = spacing;
 }
 
+void FastLabel::setTextScale(float scale)
+{
+    this->textScale = scale;
+}
+
 void FastLabel::setText(const tgui::String& string)
 {
     stdString = string.toStdString();
@@ -187,9 +192,9 @@ void FastLabel::setText(const tgui::String& string)
     float x = 0, y;
     for (size_t i = 0; i < stdString.size(); ++i)
     {
-        x += spriteSheet->getSize(stdString[i]).x + spacing;
+        x += spriteSheet->getSize(stdString[i]).x * textScale + spacing;
     }
-    y = (float)spriteSheet->getMaxHeight();
+    y = (float)spriteSheet->getMaxHeight() * textScale;
 
     this->textRect = { (int)x, (int)y };
 }
@@ -217,11 +222,11 @@ void FastLabel::drawText(const tgui::RenderStates& states) const
     switch (m_verticalAlignment)
     {
         case tgui::VerticalAlignment::Bottom:
-            vecAlgmnt.y = (float)getSize().y - spriteSheet->getCharacterSize();
+            vecAlgmnt.y = (float)getSize().y - spriteSheet->getCharacterSize() * textScale;
         break;
 
         case tgui::VerticalAlignment::Center:
-            vecAlgmnt.y = (float)getSize().y - spriteSheet->getCharacterSize();
+            vecAlgmnt.y = (float)getSize().y - spriteSheet->getCharacterSize() * textScale;
             vecAlgmnt.y /= 2.f;
         break;
 
@@ -233,19 +238,19 @@ void FastLabel::drawText(const tgui::RenderStates& states) const
     switch (m_horizontalAlignment)
     {
     case tgui::HorizontalAlignment::Right:
-        vecAlgmnt.x = (float)getSize().y - textRect.y;
-        vecAlgmnt.x *= 2;
+        vecAlgmnt.x = (float)getSize().x - textRect.x;
         break;
 
     case tgui::HorizontalAlignment::Center:
-        vecAlgmnt.x = (float)getSize().y - textRect.y;
+        vecAlgmnt.x = (float)getSize().x - textRect.x;
+        vecAlgmnt.x /= 2.f;
         break;
 
     case tgui::HorizontalAlignment::Left:
         vecAlgmnt.x = 0;
         break;
     }
-    
+
 
     sfStates.transform.translate({vecAlgmnt.x, vecAlgmnt.y});
 
@@ -254,12 +259,13 @@ void FastLabel::drawText(const tgui::RenderStates& states) const
     {
         sf::RenderStates s = sfStates;
         s.transform.translate({
-            (float)textPos.x, 
+            (float)textPos.x,
             (float)0
         });
+        s.transform.scale({textScale, textScale});
         renderWindow->draw((*spriteSheet)[stdString[i]], s);
-        
-        textPos.x += spriteSheet->getSize(stdString[i]).x + spacing;
+
+        textPos.x += (int)(spriteSheet->getSize(stdString[i]).x * textScale) + spacing;
     }
 }
 

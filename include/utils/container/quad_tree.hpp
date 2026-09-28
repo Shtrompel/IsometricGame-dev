@@ -1016,7 +1016,8 @@ struct ChunkQuadTree
 		if (!root)
 			return;
 		std::vector<Point *> result;
-		result.reserve(limit);
+		if (limit < MAX_SIZE)
+			result.reserve(limit);
 		k_nearest_rec(
 			result,
 			vec,

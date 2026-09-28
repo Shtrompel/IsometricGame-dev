@@ -52,6 +52,11 @@ public:
     std::string stdString = "";
     tgui::Vector2i textRect = { 0, 0 };
 
+    // Code made by Claude Sonnet 5 - the shared CharSpriteSheet is built at
+    // one fixed font size; textScale draws its glyphs larger/smaller per
+    // FastLabel instance instead of needing a second sprite sheet
+    float textScale = 1.f;
+
     FastLabel(const char* typeName = "Label", bool initRenderer = true);
 
     void set(tgui::Label::Ptr label);
@@ -62,6 +67,7 @@ public:
 
     void setCharSpriteSheet(CharSpriteSheet* spriteSheet);
     void setTextSpacing(int spacing);
+    void setTextScale(float scale);
     void setText(const tgui::String& string);
 
     void drawText(const tgui::RenderStates& states) const;

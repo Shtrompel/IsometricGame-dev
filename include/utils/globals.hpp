@@ -241,6 +241,16 @@ static const sf::Vector2f ENTITY_INTERACTION_SIZE = {0.35f, 0.35f};
 constexpr float MIN_FOLLOW_MELEE_DISTANCE = 0.1f;
 constexpr float MIN_FOLLOW_RANGED_DISTANCE = 5.0f;
 
+constexpr float BERSERK_ATTACK_MULTIPLIER = 1.5f;
+// Applied to squared distance when enemies weigh targets
+constexpr float BERSERK_TARGET_DISTANCE_SCALE = 0.25f;
+// How often a building refreshes its aura, and how long a refresh lasts
+constexpr float AURA_TICK_SECONDS = 0.5f;
+constexpr float AURA_LEASE_SECONDS = 1.25f;
+
+// Frames per second for animations with no velocity to drive them (work, hit)
+constexpr float STATIONARY_ANIM_SPEED = 4.f;
+
 static const sf::Vector2i DIRECTIONS[8] = {
 	{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
 
@@ -256,10 +266,12 @@ enum BOOL3 : int8_t
 	TRUE = 1
 };
 
+constexpr t_sprite SPRITE_NONE = -1;
+
 #ifdef __GNUC__
 
 #pragma GCC diagnostic pop
 
 #endif // __GNUC__
 
-#endif // GAME_GLOBALS
+#endif // GAME_GLOBALS

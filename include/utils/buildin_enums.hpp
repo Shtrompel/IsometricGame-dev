@@ -26,7 +26,8 @@ constexpr t_group ENUM_BULLET_TYPE				= 12u;
 constexpr t_group ENUM_BULLET_PROPERTY_BOOL		= 13u;
 constexpr t_group ENUM_BULLET_PROPERTY_NUM		= 14u;
 constexpr t_group ENUM_BUILDING_VISUAL_TYPE		= 15u;
-constexpr size_t  ENUM_GROUP_COUNT				= 16u;
+constexpr t_group ENUM_LIGHT_SOURCE				= 16u;
+constexpr size_t  ENUM_GROUP_COUNT				= 17u;
 
 constexpr t_serializable SERIALIZABLE_NONE			= 0u;
 constexpr t_serializable SERIALIZABLE_NETWORK		= 1u;
@@ -129,7 +130,8 @@ enum class BuildingType : t_globalenum
 	MINE,				
 	MINERS_POST,			
 	TOWER,					
-	ARMORY,					
+	ARMORY,		
+	ARCHERY,			
 	TEMPLE,
 	LIGHT_TRAP,	
 	GRAVEYARD,				
@@ -161,6 +163,12 @@ enum class PropertyBool : t_globalenum
 	HIDDEN,
 	UNREMOVABLE,
 	OFFENSIVE,
+	INDESTRUCTIBLE,
+	CORPSE_COLLECT_CITIZEN,
+	CORPSE_COLLECT_ENEMY,
+	EXPLOSIVE,
+	EXPLODE_ON_TIMER,
+	AURA, // Buffs friendly entities within the effect radius
 	LAST
 };
 
@@ -181,6 +189,13 @@ enum class PropertyNum : t_globalenum
 	ENTITY_ATTACK_RATIO,
 	ENTITY_SPEED_RATIO,
 	ENTITY_ACTION_TIME_RATIO,
+	EXPLOSION_DAMAGE,
+	EXPLODE_DELAY,
+	AURA_SPEED,
+	AURA_EVADE,
+	AURA_DOUBLE_ATTACK,
+	AURA_KNOCKBACK,
+	AURA_BERSERK_KILLS,
 	LAST
 };
 
@@ -197,6 +212,13 @@ enum class EnumAlignment : t_globalenum
 	NEUTRAL,
 	FRIENDLY,
 	ENEMY,
+	LAST
+};
+
+enum class LightSource : t_globalenum
+{
+	NONE,
+	YES,
 	LAST
 };
 
@@ -217,6 +239,13 @@ enum class EntityPropertyNums : t_globalenum
 	PATH_WEIGHT_BASE,
 	PATH_WEIGHT_SUB,
 	PATH_COUNT,
+	ATTACK,
+	SPEED_MULTIPLIER,
+	EVADE_CHANCE,
+	DOUBLE_ATTACK_CHANCE,
+	KNOCKBACK_FORCE,
+	EXPLODE_CHANCE,
+	BERSERK_KILL_THRESHOLD,
 	LAST
 };
 

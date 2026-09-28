@@ -45,10 +45,18 @@ struct PowerNetwork : public Variant
 
 	int &value(Use use);
 
+	int value(Use use) const;
+
+	// Add a building of a specific utility. The Use enum designated 
+	// whether the building is a producer, consumer or a storage of electricity.
+	// changeValue tells to update or ignore the value of the designation
 	void add(BuildingBase *base, Use use, bool changeValue = true);
 
+	// Add a set of buildings
 	void add(const t_builds &builds, Use use);
 
+	// Add a new building for the power grid. Acount for it being a consuming
+	// building, generator building and storage building.
 	void add(BuildingBase *base);
 
 	void remove(BuildingBase *base, Use use);

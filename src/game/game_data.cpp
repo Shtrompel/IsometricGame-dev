@@ -2,6 +2,10 @@
 
 #include "utils/class/logger.hpp"
 #include "utils/pathfind.hpp"
+extern "C"
+{
+#include "libs/prng.h"
+}
 
 ConstructionData::ConstructionData()
 	: Variant((size_t)SERIALIZABLE_CONSTRUCTION,
@@ -471,12 +475,19 @@ void GameData::resolve_invalid_state()
 		if (!net)
 			continue;
 
-		auto cleanNetList = [&](std::vector<VariantPtr<BuildingBase>> &list)
+		auto cleanNetList = [&](std::vector<VariantPtr<BuildingBase>> &list, const char *listName)
 		{
 			for (auto itr = list.begin(); itr != list.end();)
 			{
-				if (itr->is_null() || itr->get()->network != net)
+				if (itr->is_null())
 				{
+					WARNING("resolve_invalid_state: network %p %s had a NULL building entry, removing it", (void*)net, listName);
+					itr = list.erase(itr);
+				}
+				else if (itr->get()->network != net)
+				{
+					WARNING("resolve_invalid_state: network %p %s listed building \"%s\" (id=%zu) which no longer points back to it, removing it",
+						(void*)net, listName, itr->get()->name, itr->get()->objectId);
 					itr = list.erase(itr);
 				}
 				else
@@ -486,9 +497,9 @@ void GameData::resolve_invalid_state()
 			}
 		};
 
-		cleanNetList(net->input);
-		cleanNetList(net->output);
-		cleanNetList(net->station);
+		cleanNetList(net->input, "input");
+		cleanNetList(net->output, "output");
+		cleanNetList(net->station, "station");
 	}
 
 	// 2. Resolve Buildings
@@ -499,16 +510,26 @@ void GameData::resolve_invalid_state()
 			continue;
 
 		// Clean general entities list
+		GameBody *baseBody = base->get_body();
 		for (auto itr = base->entities.begin(); itr != base->entities.end();)
 		{
 			if (itr->is_null())
 			{
+				WARNING("resolve_invalid_state: building \"%s\" (id=%zu) had a NULL entities entry, removing it",
+					base->name, base->objectId);
 				itr = base->entities.erase(itr);
 				continue;
 			}
 			EntityCitizen *ec = dynamic_cast<EntityCitizen *>(itr->get());
-			if (!ec || (ec->home != base && ec->workplace != base))
+			// A non-citizen entity (e.g. an enemy) still belongs here if this
+			// building is the one that spawned it (GameBody::source).
+			bool keep = ec
+				? (ec->home == base || ec->workplace == base)
+				: (itr->get()->source == baseBody);
+			if (!keep)
 			{
+				WARNING("resolve_invalid_state: building \"%s\" (id=%zu) listed entity id=%zu that is neither a resident, worker, nor spawned entity there, removing it",
+					base->name, base->objectId, itr->get()->objectId);
 				itr = base->entities.erase(itr);
 			}
 			else
@@ -522,12 +543,16 @@ void GameData::resolve_invalid_state()
 		{
 			if (itr->is_null())
 			{
+				WARNING("resolve_invalid_state: building \"%s\" (id=%zu) had a NULL storedEntities entry, removing it",
+					base->name, base->objectId);
 				itr = base->storedEntities.erase(itr);
 				continue;
 			}
 			EntityCitizen *ec = dynamic_cast<EntityCitizen *>(itr->get());
 			if (!ec || ec->workplace != base || !ec->insideWorkplace)
 			{
+				WARNING("resolve_invalid_state: building \"%s\" (id=%zu) listed citizen id=%zu as stored inside but they are not a valid inside-worker there, removing it",
+					base->name, base->objectId, itr->get()->objectId);
 				itr = base->storedEntities.erase(itr);
 			}
 			else
@@ -551,6 +576,8 @@ void GameData::resolve_invalid_state()
 			}
 			if (!found)
 			{
+				WARNING("resolve_invalid_state: building \"%s\" (id=%zu) pointed to network %p which does not list it, clearing the link",
+					base->name, base->objectId, (void*)net);
 				base->network = nullptr;
 			}
 		}
@@ -566,8 +593,15 @@ void GameData::resolve_invalid_state()
 		// Clean followers list
 		for (auto itr = b->followers.begin(); itr != b->followers.end();)
 		{
-			if (itr->is_null() || itr->get()->target != b)
+			if (itr->is_null())
 			{
+				WARNING("resolve_invalid_state: body id=%zu had a NULL follower entry, removing it", b->objectId);
+				itr = b->followers.erase(itr);
+			}
+			else if (itr->get()->target != b)
+			{
+				WARNING("resolve_invalid_state: body id=%zu listed follower id=%zu whose target does not point back, removing it",
+					b->objectId, itr->get()->objectId);
 				itr = b->followers.erase(itr);
 			}
 			else
@@ -583,6 +617,8 @@ void GameData::resolve_invalid_state()
 			auto &followers = target->followers;
 			if (std::find(followers.begin(), followers.end(), b) == followers.end())
 			{
+				WARNING("resolve_invalid_state: body id=%zu targeted body id=%zu which does not list it as a follower, clearing target",
+					b->objectId, target->objectId);
 				b->target = nullptr;
 			}
 		}
@@ -601,6 +637,8 @@ void GameData::resolve_invalid_state()
 					auto &ents = ec->home->entities;
 					if (std::find(ents.begin(), ents.end(), ec) == ents.end())
 					{
+						WARNING("resolve_invalid_state: citizen id=%zu had home \"%s\" (id=%zu) which does not list them, clearing home",
+							ec->objectId, ec->home->name, ec->home->objectId);
 						ec->home = nullptr;
 					}
 				}
@@ -611,6 +649,9 @@ void GameData::resolve_invalid_state()
 					auto &ents = ec->workplace->entities;
 					if (std::find(ents.begin(), ents.end(), ec) == ents.end())
 					{
+						WARNING("resolve_invalid_state: citizen id=%zu had workplace \"%s\" (id=%zu) which does not list them, evicting from job",
+							ec->objectId, ec->workplace->name, ec->workplace->objectId);
+
 						// Evict the worker
 						ec->workplace = nullptr;
 						ec->job = CitizenJob::NONE;
@@ -618,6 +659,8 @@ void GameData::resolve_invalid_state()
 						// If they were stuck "inside" a ghost building, spit them out
 						if (ec->insideWorkplace)
 						{
+							WARNING("resolve_invalid_state: citizen id=%zu was marked insideWorkplace with no valid workplace, forcing them visible",
+								ec->objectId);
 							ec->insideWorkplace = false;
 							ec->visible = true;
 						}
@@ -627,6 +670,8 @@ void GameData::resolve_invalid_state()
 						auto &stored = ec->workplace->storedEntities;
 						if (std::find(stored.begin(), stored.end(), ec) == stored.end())
 						{
+							WARNING("resolve_invalid_state: citizen id=%zu was marked insideWorkplace at \"%s\" (id=%zu) but is not in its storedEntities, forcing them visible",
+								ec->objectId, ec->workplace->name, ec->workplace->objectId);
 							ec->insideWorkplace = false;
 							ec->visible = true;
 						}
@@ -640,19 +685,24 @@ void GameData::resolve_invalid_state()
 json GameData::to_json() const
 {
 	json j;
+	j["timeline"] = timeline.to_json();
 	return j;
 }
 
 void GameData::from_json(const json &j)
 {
+	if (j.count("timeline"))
+		timeline.from_json(j.at("timeline"));
 }
 
 void GameData::serialize_publish(const SerializeMap &map)
 {
+	timeline.serialize_publish(map);
 }
 
 void GameData::serialize_initialize(const SerializeMap &map)
 {
+	timeline.serialize_initialize(map);
 }
 
 t_tiletree *GameData::get_tree(
@@ -679,7 +729,7 @@ t_idwtree GameData::get_pair(const t_group group, const t_id id)
 	return ret;
 }
 
-std::list<t_idwtree> GameData::get_trees(GameBody *body)
+std::list<t_idwtree> GameData::get_trees(const GameBody *body)
 {
 	std::list<t_idwtree> ret;
 	const auto checkValid = [](const std::list<t_idwtree> &ret, const char *type)
@@ -701,11 +751,15 @@ std::list<t_idwtree> GameData::get_trees(GameBody *body)
 	ret.push_back(get_pair(ENUM_ALIGNMENT, (t_id)body->alignment));
 	checkValid(ret, "Aligment");
 
+	ret.push_back(get_pair(ENUM_LIGHT_SOURCE,
+		(t_id)(body->isLightSource ? LightSource::YES : LightSource::NONE)));
+	checkValid(ret, "Light Source");
+
 	switch (body->type)
 	{
 	case BodyType::ENTITY:
 	{
-		EntityBody *entity = dynamic_cast<EntityBody *>(body);
+		const EntityBody *entity = dynamic_cast<const EntityBody *>(body);
 
 		ret.push_back(get_pair(ENUM_ENTITY_TYPE, (t_id)entity->entityType));
 		checkValid(ret, "Entity Type");
@@ -724,7 +778,7 @@ std::list<t_idwtree> GameData::get_trees(GameBody *body)
 		{
 		case EntityType::CITIZEN:
 		{
-			EntityCitizen *citizen = dynamic_cast<EntityCitizen *>(entity);
+			const EntityCitizen *citizen = dynamic_cast<const EntityCitizen *>(entity);
 			if (citizen->job != CitizenJob::NONE)
 			{
 				ret.push_back(get_pair(ENUM_CITIZEN_JOB, (t_id)citizen->job));
@@ -735,8 +789,8 @@ std::list<t_idwtree> GameData::get_trees(GameBody *body)
 		break;
 		case EntityType::ENEMY:
 		{
-			EntityEnemy *enemy =
-				dynamic_cast<EntityEnemy *>(entity);
+			const EntityEnemy *enemy =
+				dynamic_cast<const EntityEnemy *>(entity);
 			if (enemy->enemyType != EntityEnemyType::NONE)
 			{
 				ret.push_back(
@@ -756,7 +810,7 @@ std::list<t_idwtree> GameData::get_trees(GameBody *body)
 	break;
 	case BodyType::BUILDING:
 	{
-		BuildingBase *build = dynamic_cast<BuildingBody *>(body)->base;
+		const BuildingBase *build = dynamic_cast<const BuildingBody *>(body)->base;
 		assert(build);
 		ret.push_back(get_pair(ENUM_BUILDING_TYPE, (t_id)build->buildType));
 
@@ -1005,7 +1059,8 @@ float GameData::bodies_distance(GameBody *a, GameBody *b)
 	}
 }
 
-void GameData::damage_body(GameBody *a, float damage)
+// Code made by Claude Sonnet 5 - evade, double-attack, knockback and kill credit resolve here; bullets pass no attacker so they only get evade
+void GameData::damage_body(GameBody *a, float damage, EntityBody *attacker)
 {
 	if (!a)
 	{
@@ -1013,28 +1068,43 @@ void GameData::damage_body(GameBody *a, float damage)
 		return;
 	}
 
-	a->get_hp() -= (int)damage;
-	/*
-	switch (a->type)
+	EntityBody *victim = (a->type == BodyType::ENTITY)
+							 ? dynamic_cast<EntityBody *>(a)
+							 : nullptr;
+
+	if (victim)
 	{
-	case BodyType::BUILDING:
+		double evade = victim->get_num(EntityPropertyNums::EVADE_CHANCE);
+		if (evade > 0.0 && prng_get_double() < evade)
+			return;
+	}
+
+	if (attacker)
 	{
-		BuildingBody *b =
-			dynamic_cast<BuildingBody *>(a);
-		b->base->hp -= damage;
+		double doubleChance = attacker->get_num(EntityPropertyNums::DOUBLE_ATTACK_CHANCE);
+		if (doubleChance > 0.0 && prng_get_double() < doubleChance)
+			damage *= 2.f;
 	}
-	break;
-	case BodyType::ENTITY:
+
+	bool wasAlive = a->get_hp() > 0;
+	a->set_hp(a->get_hp() - (int)damage);
+
+	if (!attacker)
+		return;
+
+	if (victim && a->get_hp() > 0)
 	{
-		EntityBody *b =
-			dynamic_cast<EntityBody *>(a);
-		b->hp -= damage;
+		double force = attacker->get_num(EntityPropertyNums::KNOCKBACK_FORCE);
+		if (force > 0.0)
+		{
+			FVec dir = victim->pos - attacker->pos;
+			if (vec_normalize(dir) > 0.f)
+				victim->knockVel += dir * (float)force;
+		}
 	}
-	break;
-	default:
-		WARNING("Damage switch case for body type %d is unimplemented", (int)a->type);
-	}
-	*/
+
+	if (wasAlive && a->get_hp() <= 0)
+		attacker->register_kill();
 }
 
 bool GameData::body_is_collision(
@@ -1124,6 +1194,13 @@ GameBody *GameData::add_game_body(
 
 	// Must be called before initializations
 	gb->apply_data(config);
+
+	// Code made by Claude Sonnet 5 - this is the common construction path
+	// for anything spawned via queue_add_body, including bullets; get_trees
+	// only handles ENTITY/BUILDING bodies (asserts on anything else), so
+	// bullets must be excluded here
+	if (gb->type == BodyType::ENTITY)
+		record_creation(gb);
 
 	// The map is not needed because the object does not need to initialize
 	// any other Variant objects
@@ -1308,7 +1385,7 @@ bool GameData::can_build(const BuildingQueueData &data)
 
 t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 {
-	ASSERT_ERROR("Undefined state!", debug_home_check_entities(build));
+	ASSERT_ERROR(debug_home_check_entities(build), "Undefined state!");
 
 	assert(build);
 	assert(build->get_body());
@@ -1335,7 +1412,10 @@ t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 		}
 	}
 
-	for (VariantPtr<GameBody> other : build->followers)
+	// Copy first: set_target(nullptr) below erases from build->followers,
+	// so iterating the live vector directly would invalidate the range.
+	std::vector<VariantPtr<GameBody>> followersCopy = build->followers;
+	for (VariantPtr<GameBody> &other : followersCopy)
 	{
 		other->set_target(nullptr);
 		if (other->type == BodyType::ENTITY)
@@ -1345,7 +1425,8 @@ t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 			oe->reset();
 		}
 	}
-	ASSERT_ERROR("Undefined state!", debug_home_check_entities(build));
+	ASSERT_ERROR(debug_home_check_entities(build), "Undefined state!");
+	
 	// If the building is a home, make the entities homeless
 	if (build->props.bool_is(PropertyBool::HOME))
 	{
@@ -1362,8 +1443,8 @@ t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 		 itr != build->entities.end();)
 	{
 		EntityBody *entity = itr->get();
-
 		entity->force_stop();
+		
 		if (entity->entityType == EntityType::CITIZEN)
 		{
 			auto citizen = dynamic_cast<EntityCitizen *>(itr->get());
@@ -1377,6 +1458,11 @@ t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 			else
 				++itr;
 		}
+		else if (entity->entityType == EntityType::ENEMY)
+		{
+			entity->source = nullptr;
+			++itr;
+		}
 	}
 
 	for (auto &e : build->storedEntities)
@@ -1389,7 +1475,7 @@ t_bbuilds_itr<BuildingBase *> GameData::delete_building(BuildingBase *build)
 	// Remove all workers from building
 	build->entities.clear();
 
-	ASSERT_ERROR("Undefined state!", debug_home_check_entities(build));
+	ASSERT_ERROR(debug_home_check_entities(build), "Undefined state!");
 
 	// Remove all bodies
 	for (BuildingBody *body : build->get_bodies())
@@ -1530,30 +1616,35 @@ bool GameData::connect_building_network(BuildingBase *build)
 		});
 
 	constexpr bool ONE_NETWORK = false;
+
+	// Find what network should the building connect to
+	PowerNetwork *targetNetwork = nullptr;
 	// If there's a nearby network
 	if (nearest.size())
 	{
-		build->network = nearest.front()->base->network;
+		// Connect to the nearest
+		targetNetwork = nearest.front()->base->network;
 		LOG("%s", nearest.front()->base->name);
 	}
+	// If a single networj is enforced (for testing)
 	else if (resourceContext.networks.size() && ONE_NETWORK)
 	{
 		// Use an existing network
-		build->network = resourceContext.networks.back();
+		targetNetwork = resourceContext.networks.back();
 	}
 	else
 	{
 		// Create new network
 		resourceContext.networks.push_back(new PowerNetwork(
 			counterContext.objectIdCounter.advance<PowerNetwork>()));
-		build->network = resourceContext.networks.back();
+		targetNetwork = resourceContext.networks.back();
 	}
 
 	// If the building doesn't generates electricity
 	if (build->powerOut == 0 || build->entityLimit == 0)
 	{
 		// Add to the network
-		build->network->add(build);
+		targetNetwork->add(build);
 	}
 	else
 	{
@@ -1562,13 +1653,13 @@ bool GameData::connect_building_network(BuildingBase *build)
 		for (int i = 0; i < 3; ++i)
 		{
 			PowerNetwork::Use u = (PowerNetwork::Use)i;
-			assert(build->network);
+			assert(targetNetwork);
 			if (!PowerNetwork::resource(
 					build,
 					(PowerNetwork::Use)i))
 				continue;
 			// Add the building to it's corresponding use'
-			build->network->add(build, u, false);
+			targetNetwork->add(build, u, false);
 		}
 	}
 
@@ -1736,6 +1827,14 @@ BuildingBase *GameData::add_building(const BuildingQueueData &queue, bool update
 		}
 	}
 
+	// Code made by Claude Sonnet 5 - once per BuildingBase, not per tile
+	// body, so a multi-tile building isn't counted as several creations.
+	// This also fires for construction placeholders (buildType ==
+	// CONSTRUCTION) since they're built through this same function, which
+	// is fine - they tag under a different IdPair than the finished
+	// building type a BUILD_BUILDINGS mission actually checks
+	record_creation(build->get_body());
+
 	return build;
 }
 
@@ -1793,6 +1892,21 @@ bool GameData::is_barrier(const sf::Vector2i &pos)
 		   chunks->get_tile(pos.x, pos.y).is_barrier();
 };
 
+BuildingBase *GameData::find_building_by_id(t_id id) const
+{
+	for (BuildingBase *b : bodiesContext.buildingBases)
+		if (b && b->objectId == id)
+			return b;
+	return nullptr;
+}
+
+BuildingBase *GameData::find_building_by_pos(const IVec &pos) const
+{
+	if (!chunks->has_tile(pos.x, pos.y))
+		return nullptr;
+	return chunks->get_tile(pos.x, pos.y).get_building();
+}
+
 bool GameData::get_free_neighbor(sf::Vector2f &outPos, const FVec &pos)
 {
 	sf::Vector2i ipos = vec_pos_to_tile(pos);
@@ -1849,7 +1963,10 @@ EntityCitizen *GameData::add_entity_citizen(
 	e->apply_data(dynamic_cast<GameBodyConfig *>(stats));
 	// todo
 	e->spriteHolder = e->spriteWalk;
-	return (e->confirm_body(this) ? e : nullptr);
+	if (!e->confirm_body(this))
+		return nullptr;
+	record_creation(e);
+	return e;
 }
 
 EntityCitizen *GameData::add_entity_citizen(
@@ -1897,8 +2014,7 @@ EntityCitizen *GameData::add_entity_citizen(
 			e = add_entity_citizen(
 				(sf::Vector2f)posi + sf::Vector2f{.5f, .5f},
 				stats);
-			e->home = build;
-			build->entities.push_back(e);
+			build->assign_home(e);
 			return true;
 		}
 		return false;
@@ -1983,7 +2099,10 @@ EntityEnemy *GameData::add_entity_enemy(
 {
 	EntityEnemy *e = new EntityEnemy(
 		this, pos, sprite, counterContext.objectIdCounter.advance<EntityEnemy>());
-	return (e->confirm_body(this) ? e : nullptr);
+	if (!e->confirm_body(this))
+		return nullptr;
+	record_creation(e);
+	return e;
 }
 
 EntityEnemy *GameData::add_entity_enemy(
@@ -1996,7 +2115,10 @@ EntityEnemy *GameData::add_entity_enemy(
 	EntityEnemy *e = new EntityEnemy(
 		this, pos, stats->spriteWalk, counterContext.objectIdCounter.advance<EntityEnemy>());
 	e->apply_data(stats);
-	return (e->confirm_body(this) ? e : nullptr);
+	if (!e->confirm_body(this))
+		return nullptr;
+	record_creation(e);
+	return e;
 }
 
 constexpr bool IGNORE_ASSERT = 1;
@@ -2142,7 +2264,41 @@ void GameData::delete_entity(EntityBody *e)
 {
 	sf::Vector2i ipos = vec_pos_to_tile(e->pos);
 
-	ASSERT_ERROR("Undefined state!", debug_entity_check_home(e));
+	ASSERT_ERROR(debug_entity_check_home(e), "Undefined state!");
+
+	if (e->entityType == EntityType::CITIZEN || e->entityType == EntityType::ENEMY)
+	{
+		PropertyBool requiredTag = (e->alignment == ALIGNMENT_FRIENDLY)
+			? PropertyBool::CORPSE_COLLECT_CITIZEN
+			: PropertyBool::CORPSE_COLLECT_ENEMY;
+
+		auto graveyards = nearest_buildings_quad(
+			e->pos, t_tiletree::MAX_SIZE,
+			{ENUM_PROPERTY_BOOL, (t_id)requiredTag},
+			[requiredTag](const sf::Vector2i &, const GameBody *gb, const int distsq)
+			{
+				const BuildingBase *b = dynamic_cast<const BuildingBody *>(gb)->base;
+				float r = b->effectRadius;
+				return distsq < r * r;
+			});
+		
+		if (!graveyards.empty())
+		{
+			BuildingBase* bb = graveyards.back()->base;
+
+			Resources toMove;
+			toMove[Resources::BODIES] = 1;
+			Resources bbStorageBefore = bb->rStorage;
+			Resources::transfer(
+				toMove, bb->rStorage,
+				&resourceContext.weights,
+				resourceContext.weights.get(Resources::BODIES),
+				bb->rStoreCap, bb->weightCap);
+			record_resource_gain_delta(bbStorageBefore, bb->rStorage);
+
+			bb->updateInfo = true;
+		}
+	}
 
 	chunks->get_grid(ipos.x, ipos.y)->remove_entity(e);
 
@@ -2170,6 +2326,20 @@ void GameData::delete_entity(EntityBody *e)
 	case EntityType::ENEMY:
 	{
 		EntityEnemy *enemy = dynamic_cast<EntityEnemy *>(e);
+		if (enemy->source)
+		{
+			BuildingBody *spawnerBody = dynamic_cast<BuildingBody *>(enemy->source);
+			if (spawnerBody && spawnerBody->base)
+			{
+				BuildingBase *spawner = spawnerBody->base;
+				auto itr = std::find(
+					spawner->entities.begin(),
+					spawner->entities.end(),
+					enemy);
+				if (itr != spawner->entities.end())
+					spawner->entities.erase(itr);
+			}
+		}
 		break;
 	}
 	case EntityType::CITIZEN:
@@ -2182,7 +2352,7 @@ void GameData::delete_entity(EntityBody *e)
 			citizen->workplace->remove_entity(citizen);
 		}
 
-		ASSERT_ERROR("Undefined state!", debug_entity_check_home(citizen));
+		ASSERT_ERROR(debug_entity_check_home(citizen), "Undefined state!");
 
 		if (citizen->home)
 		{
@@ -2211,6 +2381,7 @@ void GameData::delete_entity(EntityBody *e)
 	default:
 		break;
 	}
+
 }
 
 void GameData::show_entity(EntityBody *e)
@@ -2250,10 +2421,73 @@ void GameData::hide_entity(EntityBody *e)
 	Grid *gridA = chunks->get_grid(ipos.x, ipos.y);
 	gridA->remove_entity(e);
 
-	for (GameBody *follower : e->followers)
+	// Copy first: set_target(nullptr) below erases from e->followers,
+	// so iterating the live vector directly would invalidate the range.
+	std::vector<VariantPtr<GameBody>> followersCopy = e->followers;
+	for (VariantPtr<GameBody> &follower : followersCopy)
 	{
-		EntityBody *eb = (EntityBody *)(follower);
 		follower->set_target(nullptr);
+	}
+}
+
+void GameData::record_death(const GameBody *body)
+{
+	for (const t_idwtree& pair : get_trees(body))
+		++counterContext.deathCounts[pair.first];
+}
+
+void GameData::record_creation(const GameBody *body)
+{
+	for (const t_idwtree& pair : get_trees(body))
+		++counterContext.creationCounts[pair.first];
+}
+
+void GameData::record_resource_gain(int resourceId, int amount)
+{
+	auto itr = counterContext.resourceGained.find(resourceId);
+	if (itr == counterContext.resourceGained.end())
+		counterContext.resourceGained[resourceId] = amount;
+	else
+		itr->second += amount;
+}
+
+long GameData::get_deaths(const IdPair &type) const
+{
+	if (counterContext.deathCounts.find(type) == 
+		counterContext.deathCounts.end())
+	{
+		return 0;
+	}
+    return counterContext.deathCounts.at(type);
+}
+
+long GameData::get_creations(const IdPair &type) const
+{
+	if (counterContext.creationCounts.find(type) == 
+		counterContext.creationCounts.end())
+	{
+		return 0;
+	}
+    return counterContext.creationCounts.at(type);
+}
+
+long GameData::get_resource_gained(int resourceId) const
+{
+	if (counterContext.resourceGained.find(resourceId) ==
+		counterContext.resourceGained.end())
+	{
+		return 0;
+	}
+    return counterContext.resourceGained.at(resourceId);
+}
+
+void GameData::record_resource_gain_delta(const Resources &before, const Resources &after)
+{
+	for (const auto &itr : after)
+	{
+		int delta = itr.second - before.get(itr.first);
+		if (delta > 0)
+			record_resource_gain((int)itr.first, delta);
 	}
 }
 
@@ -2360,9 +2594,9 @@ std::list<BuildingBody *> GameData::nearest_buildings_aabb(const sf::Vector2f &p
 	return ret;
 }
 
-std::list<BuildingBody *> GameData::nearest_bodies_quad(const sf::Vector2f &pos, size_t limit)
+std::list<GameBody *> GameData::nearest_bodies_quad(const sf::Vector2f &pos, size_t limit)
 {
-	std::list<BuildingBody *> ret;
+	std::list<GameBody *> ret;
 	auto inserter = std::back_inserter(ret);
 
 	t_tiletree *tree = get_tree(ENUM_BODY_TYPE, (t_id)BodyType::BUILDING);

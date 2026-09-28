@@ -105,16 +105,36 @@ int &PowerNetwork::value(Use use)
 	}
 }
 
+int PowerNetwork::value(Use use) const
+{
+    switch (use)
+	{
+	case IN:
+		return powerIn;
+	case OUT:
+		return powerOut;
+	case STATION:
+		return powerStore;
+	default:
+		return powerIn;
+	}
+}
+
 void PowerNetwork::add(BuildingBase *base, Use use, bool changeValue)
 {
 	base->network = this;
 	if (changeValue)
+	{
 		value(use) += resource(base, use);
+	}
+
 	auto &vec = itr(use);
-	if (std::find(vec.begin(), vec.end(), base) == vec.end())
-		vec.insert(
-			std::upper_bound(vec.begin(), vec.end(), base),
-			base);
+	auto itr = std::find(vec.begin(), vec.end(), base);
+	if (itr == vec.end())
+	{
+		auto pos = std::upper_bound(vec.begin(), vec.end(), base);
+		vec.insert(pos, base);
+	}
 }
 
 void PowerNetwork::add(const t_builds &builds, Use use)

@@ -1,5 +1,6 @@
 #include "game/game_body.hpp"
 #include "game/game_data.hpp"
+#include "utils/class/logger.hpp"
 #include <sstream>
 #include <cassert>
 
@@ -134,10 +135,9 @@ int GameBody::get_hp() const
     return -1; 
 }
 
-int& GameBody::get_hp() 
-{ 
-    assert(0); 
-    return tmpHp; 
+void GameBody::set_hp(int value)
+{
+    assert(0);
 }
 
 GameBody* GameBody::get_target()
@@ -160,6 +160,12 @@ void GameBody::update()
 
 void GameBody::update(float delta) 
 {
+}
+
+bool GameBody::operator<(const GameBody &other) const
+{
+	// Depth sorting for rendering
+	return this->depth() < other.depth();
 }
 
 void GameBody::change_sprite(t_sprite sprite)
@@ -206,18 +212,31 @@ json GameBody::to_json() const
     j["body"]["vel"] = this->vel;
 
     // AI FIX: Check objectType instead of .get() so unloaded pointers aren't wiped out
-    if (target.objectType != 0) {
+    if (target.is_valid()) {
         j["body"]["target"] = target.to_json_ptr();
+        DEBUG("to_json: body id=%zu type=%zu writing OWN target id=%zu type=%zu",
+            this->objectId, this->objectType, target.objectId, target.objectType);
     } else {
         j["body"]["target"] = nullptr;
     }
 
-    if (followers.size()) {
+    if (!followers.empty()) {
         json fArr = json::array();
         for (const auto& f : followers) {
             // Safely push only the IDs
-            if (f.objectType != 0) {
+            if (f.is_valid()) {
                 fArr.push_back(f.to_json_ptr());
+                
+                // Debugging
+                DEBUG("to_json: body id=%zu type=%zu writing follower id=%zu type=%zu (follower->target id=%zu type=%zu valid=%d)",
+                    this->objectId, this->objectType,
+                    f.objectId, f.objectType,
+                    f.get() ? f.get()->target.objectId : (size_t)-1,
+                    f.get() ? f.get()->target.objectType : (size_t)-1,
+                    f.get() ? f.get()->target.is_valid() : -1);
+            } else {
+                DEBUG("to_json: body id=%zu type=%zu SKIPPING an invalid follower entry (id=%zu type=%zu)",
+                    this->objectId, this->objectType, f.objectId, f.objectType);
             }
         }
         j["body"]["followers"] = fArr;
@@ -253,7 +272,12 @@ void GameBody::from_json(const json &j0)
 
     this->target = nullptr;
     if (j.contains("target") && !j.at("target").is_null())
+    {
         j.at("target").get_to(this->target);
+        //DEBUG("from_json: body id=%zu type=%zu (raw json target: %s) read OWN target id=%zu type=%zu",
+        //    this->objectId, this->objectType, j.at("target").dump().c_str(),
+        //    this->target.objectId, this->target.objectType);
+    }
 
     j.at("arrUseEnums").get_to(this->arrUseEnums);
     j.at("propertyVals").get_to(this->propertyVals);
@@ -264,11 +288,28 @@ void GameBody::from_json(const json &j0)
 void GameBody::serialize_publish(const SerializeMap &map) 
 {
 	for (VariantPtr<GameBody>& b : followers)
+	{
 		if (b.is_valid())
-			map.apply(b);
+		{
+			size_t wantId = b.objectId, wantType = b.objectType;
+			bool linked = map.apply(b);
+			
+            // Debugging
+            DEBUG("serialize_publish: body id=%zu type=%zu linking follower id=%zu type=%zu -> %s (resolved target on linked body: id=%zu type=%zu valid=%d)",
+				this->objectId, this->objectType, wantId, wantType,
+				linked ? "OK" : "FAILED",
+				linked && b.get() ? b.get()->target.objectId : (size_t)-1,
+				linked && b.get() ? b.get()->target.objectType : (size_t)-1,
+				linked && b.get() ? b.get()->target.is_valid() : -1);
+		}
+	}
 	
 	if (target.is_valid()) {
-        map.apply(target);
+        size_t wantId = target.objectId, wantType = target.objectType;
+        bool linked = map.apply(target);
+        DEBUG("serialize_publish: body id=%zu type=%zu linking OWN target id=%zu type=%zu -> %s (target resolved to address=%p)",
+            this->objectId, this->objectType, wantId, wantType,
+            linked ? "OK" : "FAILED", (void*)target.get());
     }
 }
 
@@ -303,6 +344,8 @@ void GameBody::set_target(GameBody* newTarget, bool skipOld)
 
 	if (target == newTarget)
 		return;
+
+	GameBody* oldTarget = this->target;
 
 	// Remove this object as a follower from the old target
 	if (!skipOld && this->target != nullptr)
@@ -355,4 +398,39 @@ void GameBody::set_target(GameBody* newTarget, bool skipOld)
 
 	// Set the new target
 	this->target = newTarget;
+
+	// Invariant: this must now be linked from exactly the right side(s).
+	// In debug this halts immediately at the point of corruption; in
+	// release it logs and repairs the drift instead of leaving it to be
+	// discovered later by GameData::validate_state().
+	if (newTarget != nullptr)
+	{
+		bool linked = std::find(
+			newTarget->followers.begin(),
+			newTarget->followers.end(),
+			this) != newTarget->followers.end();
+		ASSERT_ERROR(linked, "set_target: this not found in newTarget->followers after linking");
+#ifdef NDEBUG
+		if (!linked)
+			newTarget->followers.push_back(this);
+#endif
+	}
+
+	if (!skipOld && oldTarget != nullptr && oldTarget != newTarget)
+	{
+		bool unlinked = std::find(
+			oldTarget->followers.begin(),
+			oldTarget->followers.end(),
+			this) == oldTarget->followers.end();
+		ASSERT_ERROR(unlinked, "set_target: this still found in oldTarget->followers after unlinking");
+#ifdef NDEBUG
+		if (!unlinked)
+		{
+			auto& followersRef = oldTarget->followers;
+			followersRef.erase(
+				std::remove(followersRef.begin(), followersRef.end(), this),
+				followersRef.end());
+		}
+#endif
+	}
 }

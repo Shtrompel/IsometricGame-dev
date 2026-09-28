@@ -55,6 +55,7 @@ void BulletBody::apply_data(GameBodyConfig* config)
 	this->maxForce = stats.maxForce;
 	this->spriteHolder = stats.sprite;
 	this->radius = stats.radius;
+	this->isLightSource = stats.isLightSource;
 
 	this->props.append(stats.props);
 
@@ -179,7 +180,7 @@ void BulletBody::update(float delta)
 
 	if (gb->get_hp() <= 0)
 	{
-		set_target(nullptr);
+		this->set_target(nullptr);
 	}
 }
 

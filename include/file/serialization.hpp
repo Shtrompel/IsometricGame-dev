@@ -249,7 +249,7 @@ struct VariantPtr final
 		return this->t == nullptr;
 	}
 	
-	bool is_valid()
+	bool is_valid() const
 	{
 		return objectType != 0;
 	}
@@ -448,8 +448,7 @@ struct SerializeMap
 		if (!resolvedPtr && (j.objectType != 0 || j.objectId != 0)) {
 			DEBUG("SerializeMap::apply FAILED to resolve Type: %zu, ID: %zu\n", j.objectType, j.objectId);
 		} else if (resolvedPtr) {
-			// Uncomment this to trace every single successful link
-			DEBUG("Linked Type: %zu, ID: %zu to Address: %p\n", j.objectType, j.objectId, (void*)resolvedPtr);
+			// DEBUG("Linked Type: %zu, ID: %zu to Address: %p\n", j.objectType, j.objectId, (void*)resolvedPtr);
 		}
 
 		j = resolvedPtr;
@@ -518,6 +517,11 @@ class VariantFactory
 
 	Variant *create(SerializeMap &map, t_variant_id type);
 
+	// Used both by create(map, type) and by ClassIdCounter::advance<T>(), so live
+	// object creation and JSON-loaded object creation can never assign
+	// the same (type, id) pair to two different live objects.
+	size_t advance_id(t_variant_id type);
+
 	template <typename T>
 	inline  t_variant_id variant_type_to_id() const
 	{
@@ -563,6 +567,11 @@ class VariantFactory
 };
 
 
+// Thin wrapper around VariantFactory's own id counter, so templated
+// call sites can allocate an id by C++ type without needing to know
+// the runtime t_variant_id. VariantFactory::mSwitchCounter is the
+// single source of truth for id allocation; this struct keeps no
+// counter state of its own.
 struct ClassIdCounter
 {
 	ClassIdCounter(VariantFactory *factory)
@@ -575,30 +584,16 @@ struct ClassIdCounter
 	{
 		assert(factory);
 		t_variant_id id = factory->variant_type_to_id<T>();
-		auto itr = counterMap.find(id);
-		if (itr == counterMap.end())
-		{
-			counterMap[id] = 0;
-			return 0;
-		}
-		return ++itr->second;
-	}
-
-	template <class T>
-	inline void set(size_t x)
-	{
-		t_variant_id id = typeid(T).hash_code;
-		counterMap[id] = 0;
+		return factory->advance_id(id);
 	}
 
 	void clear()
 	{
-		for (auto &x : counterMap)
-			x.second = 0;
+		// No-op: VariantFactory::clear_counters() (called alongside this
+		// in GameData::clean_world()) already resets the shared counter.
 	}
 
 	VariantFactory *factory = nullptr;
-	std::map<t_variant_id, size_t> counterMap{};
 };
 
 #endif // _GAME_SERIALIZABLE

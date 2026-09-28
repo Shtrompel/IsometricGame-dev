@@ -200,7 +200,7 @@ sf::Sprite *AssetSprites::get(const size_t i)
             i);
         return nullptr;
     }
-    return &sprites[i % spriteCount];
+    return &sprites[i % sprites.size()];
 }
 
 ImageAlphaGrid& AssetSprites::getAlphaGrid(const size_t i)
@@ -327,7 +327,8 @@ int AssetManager::load_texture(
     const char *subpath,
     const IVec &frameCount,
     const IVec &divisions,
-    const char *type)
+    const char *type,
+    bool pingpong)
 {
     int texId = -1;
     textures.push_back(new AssetTexture{});
@@ -356,6 +357,7 @@ int AssetManager::load_texture(
                 (int)(t.getSize().x / frameCount.x),
                 (int)(t.getSize().y / frameCount.y) };
             atex.divisions = divisions;
+            atex.pingpong = pingpong;
             texturesHash[str_uppercase(name)] = texId;
         }
         else
@@ -401,19 +403,14 @@ int AssetManager::split_sprites(
     int ret = (int)sprites.size() - 1;
     spritesHash[key] = ret;
     AssetSprites &sprite = *sprites.back();
+    sprite.spriteSize = ogSprites->spriteSize;
+    sprite.pingpong = ogSprites->pingpong;
     auto dif = framesEnd - framesStart + sf::Vector2i{1, 1};
     sprite.spriteCount = vec_prod<int>(dif);
-    sprites.resize(sprite.spriteCount);
+    // use reserve instead of resize
+    sprite.sprites.reserve(sprite.spriteCount);
+    sprite.alphaGrids = new ImageAlphaGrid[sprite.spriteCount];
     sprite.key = key;
-    /*
-    if (dif.x != 1)
-        WARNING("When using multitiled building, no divisions can be made in the horizontal axis for now");
-    for (int y = 0; y < dif.y; ++y)
-    {
-        int index = pos.y * buildSize.x + pos.x;
-
-        sprite.sprites[y] = ogSprites->sprites[index];
-    }*/
 
     if (index == DEBUG_SELECT_BUILDING_SPRITE)
         DEBUG("\nframesStart: %s\nframesEnd: %s\npos: %s\nbuildSize: %s\nsprite: %d\nspriteCount: %d\nog spriteCount: %d",
@@ -436,17 +433,23 @@ int AssetManager::split_sprites(
         {
             DEBUG("Sprite Id, Frame: %d -> Pos: %d", i, (int)spriteIndex);
         }
-        if (ogSprites && spriteIndex < ogSprites->spriteCount)
+        if (ogSprites && !ogSprites->sprites.empty())
         {
-            sprite.sprites[i] = ogSprites->sprites[spriteIndex];
-            sprite.alphaGrids[i] = ogSprites->alphaGrids[spriteIndex];
+            // Wrap instead of skipping: an undersized source (e.g. a
+            // placeholder single-frame image on a large multi-tile
+            // building) still gets a valid, if repeated, sprite per cell
+            // rather than leaving it uninitialized or aborting.
+            int srcIndex = spriteIndex % (int)ogSprites->sprites.size();
+            sprite.sprites.push_back(ogSprites->sprites[srcIndex]);
+            sprite.alphaGrids[i] = ogSprites->alphaGrids[srcIndex];
         }
         else
-        assert(0);
+            assert(0);
 
         /*DEBUG("%d %s %s %s", i, VEC_CSTR(pos), VEC_CSTR(buildSize),
         VEC_CSTR(sprite.spriteCount));*/
     }
+    sprite.spriteCount = (int)sprite.sprites.size();
     return ret;
 }
 
@@ -552,6 +555,8 @@ int AssetManager::load_sprites(
     spriteOut.sectionCount = sectionCount;
     spriteOut.frameCount = texture.frameCount;
     spriteOut.spriteSize = sectionSize;
+    spriteOut.pingpong = texture.pingpong;
+    spriteOut.animGrid = {cx, cy};
 
     if (strcmp(name, DEBUG_SELECT_BUILDING_NAME) == STRCMP_EQUAL)
     {
@@ -641,7 +646,12 @@ int AssetManager::load_sprites(
             sectionToSprites({i, j});
         }
     }
-    
+
+    // The requested count (cx*cy*frameCount) can exceed what actually got
+    // emplaced (section-limited by texture.divisions) — keep spriteCount
+    // truthful to the vector it describes rather than the geometric intent.
+    spriteOut.spriteCount = (int)spriteOut.sprites.size();
+
     if (strcmp(name, DEBUG_SELECT_BUILDING_NAME) == STRCMP_EQUAL)
     {
         for (int i = 0; i < get_sprite(ret)->spriteCount; ++i)

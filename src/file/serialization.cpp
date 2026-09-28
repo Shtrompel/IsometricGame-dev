@@ -239,8 +239,11 @@ Variant *VariantFactory::create(SerializeMap &map, t_variant_id type, size_t id)
 		mSwitchCounter[type] = 0;
 	}
 
-	mSwitchCounter[type] = math_max(mSwitchCounter[type], id);
-	
+	// Next auto-assigned id must be strictly past this one, otherwise the
+	// very next advance_id() call for this type would hand out this same
+	// id again and collide with the object just created here.
+	mSwitchCounter[type] = math_max(mSwitchCounter[type], id + 1);
+
 	t_switch_variant::const_iterator it;
 	it = mSwitchToVariant.find(type);
 	if (it == mSwitchToVariant.end())
@@ -250,13 +253,18 @@ Variant *VariantFactory::create(SerializeMap &map, t_variant_id type, size_t id)
 
 Variant *VariantFactory::create(SerializeMap &map, t_variant_id type)
 {
+	return create(map, type, advance_id(type));
+}
+
+size_t VariantFactory::advance_id(t_variant_id type)
+{
 	auto itrCounter = mSwitchCounter.find(type);
 	if (itrCounter == mSwitchCounter.end())
 	{
 		mSwitchCounter[type] = 0;
 		itrCounter = mSwitchCounter.find(type);
 	}
-	return create(map, type, (*itrCounter).second++);
+	return (*itrCounter).second++;
 }
 
 void VariantFactory::clear_counters()

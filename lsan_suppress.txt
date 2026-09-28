@@ -1,0 +1,5 @@
+# Suppress memory leaks from the NVIDIA OpenGL driver
+leak:libnvidia-glcore.so
+
+# Suppress memory leaks from FreeType (used by SFML/TGUI for font rendering)
+leak:libfreetype.so

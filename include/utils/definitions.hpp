@@ -9,6 +9,7 @@
 
 template <typename T>
 using Vec = sf::Vector2<T>;
+
 using FVec = Vec<float>;
 using DVec = Vec<double>;
 using IVec = Vec<int>;

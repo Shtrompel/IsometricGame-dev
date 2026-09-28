@@ -9,6 +9,7 @@
 #include <SFML/Config.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <SFML/System/Vector3.hpp>
 
 #include "../utils/globals.hpp"
 
@@ -319,6 +320,12 @@ template <typename U>
 static inline U vec_prod(const sf::Vector2<U> &x)
 {
     return x.x * x.y;
+}
+
+template <typename U>
+static inline U vec_sum(const sf::Vector3<U> &x)
+{
+    return x.x + x.y + x.z;
 }
 
 // Non‑template helper functions (declared, defined in .cpp)

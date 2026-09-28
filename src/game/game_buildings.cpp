@@ -111,6 +111,9 @@ BuildingBase::BuildingBase(
 
 	actionTimer = context->create_timer(context->get_time());
 
+	auraTimer = context->create_timer(context->get_time());
+	explodeTimer = context->create_timer(context->get_time());
+
 	this->tree = step;
 	this->buildType = type;
 	this->actionTimer->set_length(1.f);
@@ -157,6 +160,8 @@ json BuildingBase::to_json() const
 	j["powerStore"] = powerStore;
 	j["props"] = props;
 	j["sprites"] = sprites;
+	j["spriteLayout"] = spriteLayout;
+	j["hasSpriteLayout"] = hasSpriteLayout;
 
 	j["hp"] = hp;
 	j["lastHp"] = lastHp;
@@ -228,6 +233,8 @@ void BuildingBase::from_json(const json &j)
 		_GET("powerStore").get_to(info->powerStore);
 		_GET("props").get_to(info->props);
 		_GET("sprites").get_to(info->sprites);
+		_GET("spriteLayout").get_to(info->spriteLayout);
+		_GET("hasSpriteLayout").get_to(info->hasSpriteLayout);	
 
 		_GET("hp").get_to(data->hp);
 		_GET("lastHp").get_to(data->lastHp);
@@ -248,6 +255,10 @@ void BuildingBase::from_json(const json &j)
 		if (!actionTimer.get())
 			actionTimer = t_time_manager::make_independent_timer();
 		_GET("actionTimer").get_to(data->actionTimer);
+		if (!auraTimer.get())
+			auraTimer = t_time_manager::make_independent_timer(context->get_time());
+		if (!explodeTimer.get())
+			explodeTimer = t_time_manager::make_independent_timer(context->get_time());
 		_GET("animFrame").get_to(data->animFrame);
 		_GET("rStorage").get_to(data->rStorage);
 		_GET("rPending").get_to(data->rPending);
@@ -289,6 +300,8 @@ void BuildingBase::serialize_publish(const SerializeMap &map)
 
 	g->add_timer(costTimer);
 	g->add_timer(actionTimer);
+	g->add_timer(auraTimer);
+	g->add_timer(explodeTimer);
 
 	this->tree = dynamic_cast<UpgradeTree *>(
 		g->bodyConfigMap.at(
@@ -443,6 +456,10 @@ void BuildingBase::load_upgrade_step(UpgradeTree *step, void *tree)
 
 	if (step->entityLimit != NULL_INT)
 		this->entityLimit = step->entityLimit;
+	// Additive like props/uses: an upgrade can turn light-emission on,
+	// but a later upgrade not mentioning it shouldn't turn it back off.
+	if (step->isLightSource)
+		this->isLightSource = true;
 	if (step->delayCost != NULL_FLOAT)
 		this->costTimer->set_length(step->delayCost);
 	if (step->delayAction != NULL_FLOAT)
@@ -480,13 +497,60 @@ void BuildingBase::load_upgrade_step(UpgradeTree *step, void *tree)
 	{
 		for (auto &[key, value] : step->spriteHolders)
 			this->sprites[key] = value;
+
+		DEBUG("[SPRITE] load_upgrade_step base: step->hasSpriteLayout=%d",
+			(int)step->hasSpriteLayout);
+
+		if (step->hasSpriteLayout)
+		{
+			this->spriteLayout = step->spriteLayout;
+			this->hasSpriteLayout = true;
+		}
+
+		DEBUG("[SPRITE] BuildingBase \"%s\" now hasSpriteLayout=%d grid=%dx%d",
+			this->name, (int)this->hasSpriteLayout,
+			this->spriteLayout.gridWidth, this->spriteLayout.gridHeight);
 	}
 	else
 	{
 		WARNING("Sprites upgrade uninplemented");
 	}
 
-	props.append(step->props);
+	std::vector<PropertyBool> addedUses, removedUses;
+	addedUses = props.append(step->props);
+	removedUses = props.remove_uses(step->propsRemove);
+
+	for (PropertyBool b : removedUses)
+	{
+		auto itr = std::find(addedUses.begin(), addedUses.end(), b);
+		if (itr != addedUses.end())
+			addedUses.erase(itr);
+	}
+
+	if (context)
+	{
+		for (PropertyBool b : addedUses)
+		{
+			t_tiletree *propTree = context->get_tree(ENUM_PROPERTY_BOOL, (t_id)b);
+			for (BuildingBody *bb : get_bodies())
+			{
+				if (!bb)
+					continue;
+				propTree->insert(bb->tilePos, dynamic_cast<GameBody *>(bb));
+			}
+		}
+
+		for (PropertyBool b : removedUses)
+		{
+			t_tiletree *propTree = context->get_tree(ENUM_PROPERTY_BOOL, (t_id)b);
+			for (BuildingBody *bb : get_bodies())
+			{
+				if (!bb)
+					continue;
+				propTree->remove(bb->tilePos, dynamic_cast<GameBody *>(bb));
+			}
+		}
+	}
 
 	if (!wasPowered && props.bool_is(PropertyBool::POWER_NETWORK) && context)
 	{
@@ -545,6 +609,26 @@ void BuildingBase::damage(int attack)
 		hp = 0;
 }
 
+void BuildingBase::detonate()
+{
+	float explosionDamage = props.num_is(PropertyNum::EXPLOSION_DAMAGE)
+								 ? (float)props.num_get(PropertyNum::EXPLOSION_DAMAGE)
+								 : 0.f;
+
+	context->damage_bodies_radius(
+		get_center_pos(),
+		this->effectRadius,
+		explosionDamage);
+
+	// Code made by Claude Sonnet 5 - guard against detonate() being called
+	// more than once on the same building before it's actually removed
+	if (!flagDelete)
+		context->record_death(get_body());
+
+	this->hp = 0;
+	this->flagDelete = true;
+}
+
 BuildingBody *BuildingBase::get_body() const
 {
 	Tile &t = context->chunks->get_tile(tilePos.x, tilePos.y);
@@ -572,6 +656,117 @@ void BuildingBase::update_sprites(int rotation)
 		body->spriteHolder = rand()%20;//body->get_sprite(rotation);
 	}*/
 	// uneeded
+}
+
+int BuildingBase::get_sprite_frame_index(int previewUpgradeId) const
+{
+    // If no sprite layout is defined, keep default behaviour
+	if (!hasSpriteLayout)
+	{
+		return animFrame;
+	}
+
+	std::vector<SpriteSheetAxis> axes;
+	axes.reserve(5);
+
+	axes.emplace_back(SPRITE_LAYOUT_ANIM, math_max(animFrame, 0));
+
+	// Storage fullness
+	if (spriteLayout.axisSizes.count(SPRITE_LAYOUT_FULLNESS))
+	{
+		int stages = spriteLayout.axisSizes.at(SPRITE_LAYOUT_FULLNESS);
+		float fullness;
+		int stage = 0;
+		
+		if (weightCap > 0)
+		{
+			fullness = (float)rStorage.weight(&context->resourceContext.weights) /
+							(float)weightCap;
+			int stageCap = (int)std::round(fullness * (stages - 1));
+			stage += stageCap;
+			stage += std::clamp(stage, 0, stages - 1);
+		}
+		 else if (!rStoreCap.empty())
+		{
+			float fullness = rStorage.get_presentage_of(rStoreCap);
+			stage += std::clamp((int)std::round(fullness * (stages - 1)), 0, stages - 1);
+		}
+
+		if (powerStore)
+		{
+			fullness = (float)powerValue / powerStore;
+			int stagePower = (int)std::round(fullness * (stages - 1));
+			stage += std::clamp(stagePower, 0, stages - 1);
+		}
+
+		axes.emplace_back(SPRITE_LAYOUT_FULLNESS, stage);
+	}
+
+	// Whether the building currently has a worker inside it.
+	if (spriteLayout.axisSizes.count(SPRITE_LAYOUT_OCCUPENT))
+		axes.emplace_back(SPRITE_LAYOUT_OCCUPENT, storedEntities.empty() ? 0 : 1);
+
+	// Main and secondary upgrade path stage
+	if (spriteLayout.axisSizes.count(SPRITE_LAYOUT_UPGRADE0))
+		axes.emplace_back(
+			SPRITE_LAYOUT_UPGRADE0, 
+			get_upgrade_path_stage(0, previewUpgradeId));
+	
+	if (spriteLayout.axisSizes.count(SPRITE_LAYOUT_UPGRADE1))
+		axes.emplace_back(
+			SPRITE_LAYOUT_UPGRADE1, 
+			get_upgrade_path_stage(1, previewUpgradeId));
+
+	int result = const_cast<BuildingBase *>(this)->spriteLayout.get_nd_to_1d(axes);
+	return result;
+}
+
+static UpgradeTree *find_upgrade_node(UpgradeTree *root, int upgradeId)
+{
+	if (!root)
+		return nullptr;
+
+	std::stack<UpgradeTree*> stack;
+	stack.push(root);
+	while (!stack.empty())
+	{
+		UpgradeTree* top = stack.top();
+		stack.pop();
+		if (top->upgradeId == upgradeId)
+			return top;
+
+		for (UpgradeTree &child : top->children)
+			stack.push(&child);
+	}
+
+	return nullptr;
+}
+
+int BuildingBase::get_upgrade_path_stage(int path, int previewUpgradeId) const
+{
+    UpgradeTree *root = const_cast<BuildingBase *>(this)->get_tree(0);
+	int stage = 0;
+	
+	auto countIfOnPath = [&](int upgradeId)
+	{
+		if (upgradeId == 0)
+			return;
+
+		UpgradeTree *node = find_upgrade_node(root, upgradeId);
+		if (node && node->upgradePath == path)
+			++stage;
+	};
+
+	for (int upgradeId : this->upgrades)
+		countIfOnPath(upgradeId);
+
+	if (previewUpgradeId > 0 &&
+		std::find(upgrades.begin(), upgrades.end(), previewUpgradeId) == upgrades.end())
+	{
+		countIfOnPath(previewUpgradeId);
+	}
+	
+	return stage;
 }
 
 bool BuildingBase::is_any_storage() const
@@ -608,10 +803,6 @@ std::vector<UpgradeTree *> BuildingBase::get_upgrades()
 
 void BuildingBase::accept_entity(EntityCitizen *e)
 {
-	// DEBUG(
-	//	"Size before: %d, limit: %d",
-	//  	(int)entities.size(), (int)entityLimit);
-
 	e->workplace = this;
 
 	if (std::find(entities.begin(), entities.end(), e) == entities.end())
@@ -633,10 +824,6 @@ void BuildingBase::accept_entity(EntityCitizen *e)
 				->get_tree(ENUM_INGAME_PROPERTIES, nw)
 				->remove(bbody->tilePos, body); });
 	}
-
-	// DEBUG(
-	//	"Size after: %d, limit: %d",
-	//	(int)entities.size(), (int)entityLimit);
 }
 
 void BuildingBase::accept_entity_job(EntityCitizen *e)
@@ -709,12 +896,11 @@ void BuildingBase::exit_entity(EntityCitizen *e)
 	}
 }
 
-// game_buildings.cpp (around line 850)
 std::vector<VariantPtr<EntityBody>>::iterator
 BuildingBase::remove_entity(EntityCitizen *e)
 {
 	assert(e->workplace == this);
-
+	
 	// If work space was created, add to the "NEEDS_WORKERS" tree
 	if (entities.size() == entityLimit)
 	{
@@ -731,8 +917,7 @@ BuildingBase::remove_entity(EntityCitizen *e)
 			context->get_tree(ENUM_INGAME_PROPERTIES, nw)->insert(bbody->tilePos, body); });
 	}
 
-	t_tiletree* jobTree;
-	context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job);
+	t_tiletree* jobTree = context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job);
 
 	// Remove from the old job tree BEFORE changing the variable
 	jobTree->remove(vec_pos_to_tile(e->pos), e);
@@ -742,10 +927,75 @@ BuildingBase::remove_entity(EntityCitizen *e)
 
 	auto itr = std::find(entities.begin(), entities.end(), e);
 	assert(itr != entities.end());
-	auto ret = this->entities.erase(itr);
 
-	// Add it to the new NONE tree so it can be properly tracked
-	jobTree->insert(vec_pos_to_tile(e->pos), e);
+	// "entities" is shared between the home and workplace roles: if this
+	// citizen also lives here, they must stay listed even after losing
+	// their job here, otherwise they'd wrongly get evicted from their home.
+	std::vector<VariantPtr<EntityBody>>::iterator ret;
+	if (e->home != this)
+	{
+		ret = this->entities.erase(itr);
+	}
+	else
+	{
+		ret = std::next(itr);
+	}
+
+	// If the entity is alive, add it to the new NONE tree so it can be properly tracked
+	t_tiletree* newJobTree = context->get_tree(ENUM_CITIZEN_JOB, (t_id)e->job);
+	if (!e->dead && e->visible) {
+		newJobTree->insert(vec_pos_to_tile(e->pos), e);
+	}
+
+	return ret;
+}
+
+void BuildingBase::assign_home(EntityCitizen *e)
+{
+	e->home = this;
+
+	if (std::find(entities.begin(), entities.end(), e) == entities.end())
+		this->entities.push_back(e);
+
+	bool linked = std::find(entities.begin(), entities.end(), e) != entities.end();
+	ASSERT_ERROR(linked, "assign_home: entity not found in entities after linking");
+#ifdef NDEBUG
+	if (!linked)
+		this->entities.push_back(e);
+#endif
+}
+
+std::vector<VariantPtr<EntityBody>>::iterator
+BuildingBase::evict_home(EntityCitizen *e)
+{
+	assert(e->home == this);
+
+	e->home = nullptr;
+
+	auto itr = std::find(entities.begin(), entities.end(), e);
+	std::vector<VariantPtr<EntityBody>>::iterator ret = entities.end();
+
+	// "entities" is shared between the home and workplace roles: only
+	// erase if the citizen doesn't still work here, otherwise they'd
+	// wrongly get evicted from their job too.
+	bool shouldStayListed = (e->workplace == this);
+	if (itr != entities.end())
+	{
+		ret = shouldStayListed ? std::next(itr) : this->entities.erase(itr);
+	}
+
+	bool ok = shouldStayListed ==
+		(std::find(entities.begin(), entities.end(), e) != entities.end());
+	ASSERT_ERROR(ok, "evict_home: entities membership inconsistent with workplace role after unlinking");
+#ifdef NDEBUG
+	if (!ok)
+	{
+		if (shouldStayListed)
+			entities.push_back(e);
+		else
+			entities.erase(std::remove(entities.begin(), entities.end(), e), entities.end());
+	}
+#endif
 
 	return ret;
 }
@@ -776,9 +1026,20 @@ void BuildingBase::update()
 		this->lastHp = this->hp;
 	}
 
-	if (this->hp <= 0 && this->hp != BUILDING_INFINITE_HEALTH)
+	if (this->hp <= 0 && this->hp != BUILDING_INFINITE_HEALTH &&
+		!props.bool_is({PropertyBool::INDESTRUCTIBLE}))
 	{
-		this->flagDelete = true;
+		if (props.bool_is(PropertyBool::EXPLOSIVE))
+			detonate();
+		else
+		{
+			// Code made by Claude Sonnet 5 - this branch re-executes every
+			// frame while hp stays <= 0 before removal actually happens,
+			// so guard against recording the same death repeatedly
+			if (!flagDelete)
+				context->record_death(get_body());
+			this->flagDelete = true;
+		}
 	}
 
 	// Go through every propertyVals
@@ -944,6 +1205,7 @@ void BuildingBase::update()
 		if (!out.empty())
 		{
 			// Move the resources to the building's storage
+			Resources rStorageBefore = rStorage;
 			Resources::transfer(
 				out,
 				rStorage,
@@ -951,12 +1213,58 @@ void BuildingBase::update()
 				weightCap,	// Max transfer amount
 				rStoreCap,	// Max storage capacity
 				weightCap); // Transfer count
+			context->record_resource_gain_delta(rStorageBefore, rStorage);
 			this->updateInfo = true;
 		}
 	}
 
 	bool isOffensive = props.bool_is(PropertyBool::OFFENSIVE);
 	bool isHome = props.bool_is(PropertyBool::HOME);
+
+	// Code made by Claude Sonnet 5 - lease this building's aura numbers to every friendly entity in range; entities take the deltas back on their own once the lease expires
+	bool auraTick = false;
+	if (props.bool_is(PropertyBool::AURA) && !flagDelete && is_operational())
+	{
+		auraTimer->set_length(AURA_TICK_SECONDS);
+		auraTick = auraTimer->next_surplus(context->get_time());
+	}
+	if (auraTick)
+	{
+		t_seconds now = context->get_time();
+
+		std::map<EntityPropertyNums, double> deltas;
+		const auto addDelta = [&](PropertyNum source, EntityPropertyNums target)
+		{
+			if (!props.num_is(source))
+				return;
+			double value = props.num_get(source);
+			if (value != 0.0)
+				deltas[target] = value;
+		};
+		addDelta(PropertyNum::AURA_SPEED, EntityPropertyNums::SPEED_MULTIPLIER);
+		addDelta(PropertyNum::AURA_EVADE, EntityPropertyNums::EVADE_CHANCE);
+		addDelta(PropertyNum::AURA_DOUBLE_ATTACK, EntityPropertyNums::DOUBLE_ATTACK_CHANCE);
+		addDelta(PropertyNum::AURA_KNOCKBACK, EntityPropertyNums::KNOCKBACK_FORCE);
+		addDelta(PropertyNum::AURA_BERSERK_KILLS, EntityPropertyNums::BERSERK_KILL_THRESHOLD);
+
+		if (!deltas.empty())
+		{
+			t_alignment side = this->alignment;
+			auto nearby = context->nearest_bodies_radius<EntityBody>(
+				get_center_pos(),
+				effectRadius,
+				SIZE_MAX,
+				[side](const GameBody *gb, const int, const int)
+				{
+					return gb->type == BodyType::ENTITY &&
+						   !gb->dead &&
+						   gb->alignment == side;
+				});
+
+			for (EntityBody *e : nearby)
+				e->apply_aura(this->objectId, deltas, now + AURA_LEASE_SECONDS);
+		}
+	}
 
 	GameBody *target = nullptr;
 
@@ -981,8 +1289,41 @@ void BuildingBase::update()
 		}
 	}
 
-	//if (!target && !isHome && spawn.serializableID != 0)
-	//	return;
+	if (props.bool_is(PropertyBool::EXPLOSIVE) && !flagDelete)
+	{
+		float effectRadius = this->effectRadius;
+		auto nearbyEnemies =
+			context->nearest_bodies_quad(
+				this->get_center_pos(),
+				1ull,
+				{ENUM_ALIGNMENT, GameData::alignment_opposite(this->alignment)},
+				[effectRadius](const sf::Vector2i &pos,
+							   const GameBody *gb,
+							   const int dist)
+				{
+					return !gb->dead && dist < effectRadius;
+				});
+
+		if (nearbyEnemies.size())
+			detonate();
+		else if (props.bool_is(PropertyBool::EXPLODE_ON_TIMER) &&
+				 creationTime >= 0.f &&
+				 props.num_is(PropertyNum::EXPLODE_DELAY))
+		{
+			explodeTimer->set_length((t_seconds)props.num_get(PropertyNum::EXPLODE_DELAY));
+			if (explodeTimer->finished(context->get_time()))
+				detonate();
+		}
+	}
+
+	auto gotHereTower = [=](int line)
+	{
+		if (buildType == (t_id)BuildingType::TOWER)
+		{
+			DEBUG("Tower got here: %d", line);
+		}
+	};
+
 
 	// Spawning
 	for (int i = 0; i < actionTimes; ++i)
@@ -991,19 +1332,21 @@ void BuildingBase::update()
 		if (!is_operational())
 			continue;
 
-		// Clean up dead entities (null VariantPtrs) so they don't count towards the limit
+		// Code made by Claude Sonnet 5 - set externally (e.g. by a running
+		// Timeline event via GameData::find_building_by_id/pos), never by
+		// the building itself; lets a scenario start/stop a portal without
+		// the portal knowing a timeline exists
+		if (!spawnEnabled)
+			continue;
+
+			// Clean up dead entities (null VariantPtrs) so they don't count towards the limit
 		for (auto itr = entities.begin(); itr != entities.end();) {
 			if (itr->is_null())
 				itr = entities.erase(itr);
 			else
 				++itr;
 		}
-
-		if (entities.size() >= entityLimit)
-		{
-			continue;
-		}
-
+		
 		if (spawn.id.group != ENUM_NONE &&
 			spawn.serializableID != 0)
 		{
@@ -1012,6 +1355,11 @@ void BuildingBase::update()
 
 			if (isHome)
 			{
+				if (entities.size() >= entityLimit)
+				{
+					continue;
+				}
+
 				if (!context->get_free_neighbor(
 						freePos, this->get_bodies().back()->pos))
 					continue;
@@ -1026,12 +1374,14 @@ void BuildingBase::update()
 			if (isOffensive && target)
 			{
 				FVec targetPos = target->pos;
+
 				if (target->type == BodyType::BUILDING)
 				{
 					BuildingBody *build;
 					build = dynamic_cast<BuildingBody *>(target);
 					targetPos = build->base->get_center_pos();
 				}
+
 				FVec dif = -(this->get_center_pos() - target->pos);
 				vec_normalize(dif);
 
@@ -1078,6 +1428,7 @@ BuildingBody::BuildingBody(
 	this->shape = ShapeType::RECT;
 	this->frame = (int)base->animFrame;
 	this->alignment = base->alignment;
+	this->isLightSource = base->isLightSource;
 }
 
 BuildingBody::~BuildingBody()
@@ -1092,9 +1443,9 @@ int BuildingBody::get_hp() const
 	return base.get()->hp;
 }
 
-int &BuildingBody::get_hp()
+void BuildingBody::set_hp(int value)
 {
-	return base.get()->hp;
+	base.get()->hp = value;
 }
 
 void BuildingBody::apply_data(GameBodyConfig *config)
@@ -1109,6 +1460,12 @@ bool BuildingBody::confirm_body(GameData *context)
 
 	BuildingBody *body = this;
 	body->context = context;
+
+	if (body->base->creationTime < 0.f)
+	{
+		body->base->creationTime = context->get_time();
+		body->base->explodeTimer->reset(context->get_time());
+	}
 
 	Tile &tile = context->chunks->get_tile(body->tilePos.x, body->tilePos.y);
 	tile.building = body;
@@ -1223,4 +1580,4 @@ void BuildingBody::serialize_initialize(const SerializeMap &map)
 	// Confirm the body
 	this->confirm_body(g);
 	// g->objectId = g->counterContext.objectIdCounter.advance<BuildingBody>();
-}
+}

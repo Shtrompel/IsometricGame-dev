@@ -46,6 +46,7 @@ struct PathfindNode
 	unsigned gScore = 0u;
 	unsigned hScore = 0u;
 	sf::Vector2i prev;
+	bool inOpenSet = false, inClosedSet = false;
 
 	PathfindNode() {}
 
@@ -59,6 +60,8 @@ struct PathfindNode
 	{
 		return dijkstra * gScore + greed * hScore;
 	}
+
+
 };
 
 //https://github.com/daancode/a-star/blob/master/source/AStar.cpp
@@ -83,7 +86,17 @@ inline PathData generate_path(
 	};
 
 	std::unordered_map<Vec<int>, PathfindNode> hashGrid;
-	std::vector<PathfindNode *> openSet, closedSet;
+
+	const auto openSetCmp = [dijkstra, greed](const PathfindNode *a, const PathfindNode *b) 
+	{
+		unsigned fa, fb;
+		fa = a->f(dijkstra, greed);
+		fb = b->f(dijkstra, greed);
+		if (fa != fb) 
+			return fa > fb;
+		return a->hScore > b->hScore;
+	};
+	std::priority_queue<PathfindNode *, std::vector<PathfindNode *>, decltype(openSetCmp)> openSet(openSetCmp);
 
 	if (isBarrier(start))
 	{
@@ -94,7 +107,7 @@ inline PathData generate_path(
 	{
 		hashGrid[start] =
 			PathfindNode(start, euclideanHeuristicDist(start, end)); //int_abs(start.x - end.x) + int_abs(start.y - end.y);
-		openSet.push_back(&hashGrid[start]);
+		openSet.push(&hashGrid[start]);
 	}
 	unsigned iterationCount = 0;
 	PathfindNode *best = nullptr;
@@ -107,22 +120,14 @@ inline PathData generate_path(
 		++iterationCount;
 
 		// Find node with smalleat f value
-		auto itrBest = openSet.begin();
-		best = *itrBest;
-		for (auto itr = openSet.begin(); itr != openSet.end(); ++itr)
-		{
-			PathfindNode *n = *itr;
-			if (n->f(dijkstra, greed) < best->f(dijkstra, greed) ||
-				(n->f(dijkstra, greed) == best->f(dijkstra, greed) &&
-				 n->hScore < best->hScore))
-			{
-				itrBest = itr;
-				best = n;
-			}
-		}
+		best = openSet.top();
+		openSet.pop();
 
-		closedSet.push_back(best);
-		openSet.erase(itrBest);
+		if (best->inClosedSet)
+			continue;
+
+		best->inClosedSet = true;
+
 		// Iterate through all 8 directions
 		for (int i = 0; i < 8; i++)
 		{
@@ -137,9 +142,10 @@ inline PathData generate_path(
 				skip |= isBarrier(best->tilePos + sf::Vector2i{dir.x, 0}) ||
 						isBarrier(best->tilePos + sf::Vector2i{0, dir.y});
 			}
+			auto itClosed = hashGrid.find(pos);
+			skip = skip || (itClosed != hashGrid.end() && itClosed->second.inClosedSet);
 			skip = skip || isBarrier(pos);
-			skip = skip || std::find_if(closedSet.begin(), closedSet.end(),
-										[pos](const PathfindNode *n) { return n->tilePos == pos; }) != closedSet.end();
+			
 			if (skip && pos != end)
 			{
 				continue;
@@ -148,24 +154,18 @@ inline PathData generate_path(
 			// Euclidean heuristic
 			unsigned newG = best->gScore + (isDiag ? 14 : 10);
 
-			auto nextItr = std::find_if(openSet.begin(), openSet.end(),
-										[pos](const PathfindNode *n) { return n->tilePos == pos; });
-
-			if (nextItr == openSet.end())
+			auto itNode = hashGrid.find(pos);
+			bool isNew = (itNode == hashGrid.end());
+			if (isNew || newG < itNode->second.gScore)
 			{
 				PathfindNode &successor = hashGrid[pos];
 				successor.prev = best->tilePos;
 				successor.tilePos = pos;
 				successor.hasPrev = true;
 				successor.gScore = newG;
-				// Euclidean distance heuristic
 				successor.hScore = euclideanHeuristicDist(pos, end);
-				openSet.push_back(&successor);
-			}
-			else
-			{
-				PathfindNode &successor = **nextItr;
-				successor.gScore = newG;
+				successor.inOpenSet = true;
+				openSet.push(&successor);
 			}
 		}
 
@@ -346,7 +346,7 @@ static PathData find_build_path(
 
 	// Get the nearest building
 
-	list = context->nearest_bodies_quad(
+	list = context->nearest_buildings_quad(
 		originSearch,
 		1,
 		treeId,

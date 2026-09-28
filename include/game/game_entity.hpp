@@ -112,6 +112,7 @@ struct EntityStats : GameBodyConfig
 	float cooldownPath = 0.0f;
 
 	bool aggressive = false;
+	bool isLightSource = false;
 
 	int sfxAction = 0;
 	int sfxIdle = 0;
@@ -124,37 +125,6 @@ struct EntityStats : GameBodyConfig
 
 };
 
-struct EntityStatsContainer
-{
-	std::map<t_idpair, t_id> keys;
-	std::map<t_id, EntityStats*> statMap;
-	EntityStats* nullValue = nullptr;
-
-	typedef decltype(statMap.begin()) iterator;
-
-	EntityStatsContainer();
-	
-	~EntityStatsContainer();
-
-	void insert(
-		t_idpair pair,
-		t_id key,
-		const EntityStats& stats);
-
-	EntityStats* operator[](t_id key);
-
-	EntityStats* get(t_idpair pair);
-
-	bool has(t_id key) const;
-
-	bool has(t_idpair pair) const;
-
-	size_t size() const;
-
-	iterator begin();
-
-	iterator end();
-};
 
 namespace EntityBodyStr
 {
@@ -204,9 +174,10 @@ struct EntityBody : public GameBody
 	t_sprite spriteHit = 0;
 	t_sprite spriteAttack = 0;
 
-	// Mutable
-	int hp = 2u;
-	int attack = 1u;
+	// Self-evolving state, changes on its own during gameplay
+	int hp = 2;
+	int killCount = 0;
+	bool isBerserk = false;
 
 	t_seconds animTime = 0.0f;
 	std::list<VariantPtr<BuildingBody>> nearbyBuilds;
@@ -216,22 +187,39 @@ struct EntityBody : public GameBody
 	int inventorySize = 60;
 	int transferSize = 10;
 	float maxSpeed = 1.5f;
-	float maxForce = 0.9f, speedMultiplier = 0.05f;
+	float maxForce = 0.9f;
 
 	bool aggressive = false;
+	bool debugFollowMouse = false;
+	sf::Vector2f debugTarget{};
 	std::map<t_idpair, float> targetPriority;
 	std::map<t_idpair, float> targetBonus;
 
 	// If there is a window containing this entitie's info,
 	// make the game know to update the window
 	bool updateInfo = false;
-
+	
 	// The last tile position of the target
 	// If changes, update the path
 	IVec targetLPos{};
 
-	PropertySet<EntityPropertyBools, EntityPropertyNums>
-		props;
+	// Baseline properties, assigned by the job type (and the workplace)
+	PropertySet<EntityPropertyBools, EntityPropertyNums> props;
+
+	// Changes caused by external influences (auras, tiles, buildings),
+	// added on top of the baseline in props. Never serialized.
+	std::map<EntityPropertyNums, double> propsDelta;
+
+	// Code made by Claude Sonnet 5 - an aura source (e.g. a Temple) leases its deltas to the entity and keeps renewing them; when it stops (destroyed, entity walked away) the lease expires and its deltas are taken back out of propsDelta
+	struct AuraLease
+	{
+		std::map<EntityPropertyNums, double> deltas;
+		t_seconds expire = 0.f;
+	};
+	std::map<size_t, AuraLease> auraLeases;
+
+	// Knockback velocity from a hit, decays on its own
+	sf::Vector2f knockVel{};
 
 	t_body_timer timerAction;
 	t_body_timer timerPath;
@@ -266,13 +254,34 @@ struct EntityBody : public GameBody
 
 	int get_hp() const override;
 
-	int& get_hp() override;
+	void set_hp(int) override;
+
+	double get_base(EntityPropertyNums n) const;
+
+	double get_delta(EntityPropertyNums n) const;
+
+	// Effective value: baseline + delta
+	double get_num(EntityPropertyNums n) const;
+
+	void add_delta(EntityPropertyNums n, double amount);
+
+	void apply_aura(
+		size_t sourceId,
+		const std::map<EntityPropertyNums, double> &deltas,
+		t_seconds expire);
+
+	void expire_auras(t_seconds now);
+
+	// Called when this entity lands a killing blow
+	void register_kill();
 
 	bool set_path(PathData &&path);
 
 	void update_path();
 
 	void update(float delta) override;
+
+	int get_direction_frame(int rotation = 0);
 
 	void change_action(Action action);
 

@@ -194,6 +194,8 @@ bool json_settings_load(
 
 		jSettings.at("ui_scaling").get_to(settings.uiScale);
 
+		jSettings.at("enable_shaders").get_to(settings.enableShaders);
+
 	}
 	catch (const nlohmann::json::exception& e)
 	{

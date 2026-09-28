@@ -72,6 +72,8 @@ struct GameSettings
 
 	float uiScale = 1.0;
 
+	bool enableShaders = true;
+
 	std::string to_string() const
 	{
 		std::stringstream ss;

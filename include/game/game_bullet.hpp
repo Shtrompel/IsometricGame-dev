@@ -17,6 +17,7 @@ struct BulletStats : GameBodyConfig
 	float maxForce = 0.0;
 	float radius = 0.0f;
 	t_sprite sprite = 0;
+	bool isLightSource = false;
 
 
 	PropertySet<BulletPropertyBools, BulletPropertyNums> props;

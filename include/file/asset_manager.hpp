@@ -66,14 +66,42 @@ struct AssetSprites
     int spriteCount;
     IVec sectionCount = {1, 1};
     IVec frameCount = {1, 1};
+    // i removed the comments CLAUDE they are annoying
+    IVec animGrid = {1, 1};
     AssetKeySprites key;
     bool allowOverflow = true;
+
+    // Code made by Claude Sonnet 5 - whether get()'s frame index should fold
+    // back and forth (0,1,2,1,0,...) instead of looping (0,1,2,0,1,2,...);
+    // set per-texture via textures.json's "anim_mode" and carried over here
+    bool pingpong = false;
 
     IVec spriteSize = { 0, 0 };
 
     sf::Sprite *get(const size_t i);
     ImageAlphaGrid& getAlphaGrid(const size_t i);
     std::string to_string() const;
+
+    // Code made by Claude Sonnet 5 - folds a raw, ever-increasing frame
+    // counter into an index within [0, cols), respecting this sheet's
+    // animation mode (pingpong vs the default loop)
+    int fold_frame(int frame, int cols) const
+    {
+        if (cols <= 1)
+            return 0;
+
+        if (!pingpong)
+        {
+            int m = frame % cols;
+            return m < 0 ? m + cols : m;
+        }
+
+        int period = 2 * (cols - 1);
+        int m = frame % period;
+        if (m < 0)
+            m += period;
+        return m < cols ? m : period - m;
+    }
 };
 
 struct AssetTexture
@@ -84,6 +112,10 @@ struct AssetTexture
     IVec frameSize;
     IVec frameCount = {1, 1};
     IVec divisions = {1, 1};
+
+    // Code made by Claude Sonnet 5 - carried into every AssetSprites cut from
+    // this texture; see AssetSprites::pingpong
+    bool pingpong = false;
 
     std::string to_string() const;
 };
@@ -128,7 +160,8 @@ struct AssetManager
         const char *subpath = "",
         const IVec &frameCount = {1, 1},
         const IVec &divisions = {1, 1},
-        const char *type = "png");
+        const char *type = "png",
+        bool pingpong = false);
     int split_sprites(
         int index,
         const sf::Vector2i &framesStart,

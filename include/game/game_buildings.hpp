@@ -5,6 +5,7 @@
 #include "game/game_entity.hpp"
 #include "game/power_network.hpp"
 #include "utils/buildin_enums.hpp"
+#include "render/sprite_layout.hpp"
 
 struct GameData;
 
@@ -28,19 +29,18 @@ struct UpgradeTree : GameBodyConfig
 	t_alignment alignment = NULL_INT;
 
 	char image[MAX_SHORT_STR] = NULL_STR;
-	// Two int vectors containing the range of frames
-	// from the texture sprite
+	
+	// Animation sprites index grid
 	IVec framesStart = NULL_IVEC,
 		framesEnd = NULL_IVEC;
-
-	IVec framesUStart = NULL_IVEC,
-		framesUEnd = NULL_IVEC;
-
-	//t_sprite spriteHolder = -1;
+	
 	std::unordered_map<sf::Vector2i, t_sprite>
-		spriteHolders = {{sf::Vector2i{0, 0}, -1}},
-		spriteUHolders = { {sf::Vector2i{0, 0}, -1} };
+		spriteHolders = {{sf::Vector2i{0, 0}, -1}};
 	t_sprite spriteIcon = 0;
+
+	SpriteSheetSystem spriteLayout;
+	bool hasSpriteLayout = false;
+	bool isLightSource = false;
 
 	char spriteImage[MAX_SHORT_STR] = NULL_STR;
 	// TextureFrames spriteFrames{};
@@ -68,6 +68,9 @@ struct UpgradeTree : GameBodyConfig
 
 	CitizenJob job = CitizenJob::NONE;
 	PropertySet<PropertyBool, PropertyNum> props;
+
+	// Properties that are flagged for deletion from previous building
+	PropertySet<PropertyBool, PropertyNum> propsRemove;
 	SpawnInfo spawn;
 
 	// The id of the specific upgrade in the tree,
@@ -113,6 +116,7 @@ struct BuildingBaseInfo
 	int weightCap = -1;
 	unsigned entityLimit = 0u;
 	bool active = true, sufficient = true;
+	bool isLightSource = false;
 
 	Resources rIn, rOut;
 	Resources rStoreCap;
@@ -121,8 +125,12 @@ struct BuildingBaseInfo
 	PropertySet<PropertyBool, PropertyNum> props;
 
 	UpgradeTree *tree = nullptr;
+
 	std::unordered_map<IVec, t_sprite>
 		sprites = { {IVec{0, 0}, -1} };
+	
+	SpriteSheetSystem spriteLayout;
+	bool hasSpriteLayout = false;
 };
 
 // "Dynamic/Volatile" variables
@@ -158,10 +166,18 @@ struct BuildingBaseData
 	bool updateInfo = false;
 	std::vector<VariantPtr<GameBody>> followers;
 
-
-
 	// ID of every upgrade
 	std::vector<int> upgrades;
+
+	// Guards the one-time creationTime/explodeTimer initialization in confirm_body
+	t_seconds creationTime = -1.f;
+
+	// Code made by Claude Sonnet 5 - GameTimer instead of a raw t_seconds
+	// compared against get_time(), so timerManager.stop_all()/resume_all()
+	// (driven by the pause toggle) can suspend/resume it correctly instead
+	// of it silently ticking through a pause in real wall-clock time
+	t_body_timer explodeTimer;
+	t_body_timer auraTimer;
 };
 
 // Todo inheritance to composition
@@ -172,6 +188,12 @@ struct BuildingBase : BuildingBaseInfo,
 	GameData *context = nullptr;
 	BuildingBaseInfo *info = dynamic_cast<BuildingBaseInfo *>(this);
 	BuildingBaseData *data = dynamic_cast<BuildingBaseData *>(this);
+
+	// Code made by Claude Sonnet 5 - runtime-only spawn gate; not saved.
+	// Whoever wants to start/stop this building's spawning (e.g. a running
+	// Timeline event) sets this directly instead of the building holding
+	// any reference back to what's controlling it
+	bool spawnEnabled = true;
 
 	BuildingBase();
 
@@ -216,11 +238,17 @@ struct BuildingBase : BuildingBaseInfo,
 
 	void update_sprites(int rotation);
 
+	int get_sprite_frame_index(int previewUpgradeId = -1) const;
+
+	int get_upgrade_path_stage(int path, int previewUpgradeId = -1) const;
+
 	bool tree_similar(BuildingBase *);
 
 	// Gameplay
 
 	inline void damage(int attack);
+
+	void detonate();
 
 	// BuildingBody
 
@@ -252,6 +280,13 @@ struct BuildingBase : BuildingBaseInfo,
 
 	// "Fire" the worker back to a jobless citizen
 	std::vector<VariantPtr<EntityBody>>::iterator remove_entity(EntityCitizen *);
+
+	// Move a citizen in as a resident
+	void assign_home(EntityCitizen *);
+
+	// Evict a resident citizen; keeps them listed in "entities" if they
+	// still work here, since that list is shared between both roles.
+	std::vector<VariantPtr<EntityBody>>::iterator evict_home(EntityCitizen *);
 };
 
 struct BuildingBody
@@ -281,8 +316,7 @@ struct BuildingBody
 	virtual ~BuildingBody();
 
 	int get_hp() const override;
-
-	int& get_hp() override;
+	void set_hp(int value) override;
 
 	void apply_data(GameBodyConfig* config) override;
 	
@@ -301,4 +335,4 @@ struct BuildingBody
 	void serialize_initialize(const SerializeMap &map) override;
 };
 
-#endif // _GAME_BUILDINGS
+#endif // _GAME_BUILDINGS

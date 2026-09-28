@@ -33,6 +33,7 @@ int game_main(int argc, char* argv[])
 	desc.add_options()
 		("help", "produce help message")
 		("test", po::value<std::string>(), "load test by ID (integer) or name (string)")
+		("scenario", po::value<std::string>(), "load a campaign scenario by name (assets/campaign/<name>.json)")
 	;
 
 	po::variables_map vm;
@@ -53,6 +54,10 @@ int game_main(int argc, char* argv[])
 		std::string testStr = vm["test"].as<std::string>();
 		testId = window_gameplay_test_map_str2int(testStr);
 	}
+
+	std::string scenarioName;
+	if (vm.count("scenario"))
+		scenarioName = vm["scenario"].as<std::string>();
 
 	// Initialize sfml essentials
 	sf::VideoMode videoMode;
@@ -135,6 +140,9 @@ int game_main(int argc, char* argv[])
 			DEBUG("Unable to convert jsonSettings to settings");
 			return EXIT_FAILURE;
 		}
+
+		settings.enableShaders = settings.enableShaders && sf::Shader::isAvailable();
+
 		// Set the settings
 		manager.set_settings_data(settings);
 	}
@@ -157,6 +165,14 @@ int game_main(int argc, char* argv[])
 	if (testId != -1)
 	{
 		gameWindow->run_test_generator(testId);
+		manager.change_window(manager.get_window_from_id("GAMEPLAY"));
+	}
+	else if (!scenarioName.empty())
+	{
+		// Code made by Claude Sonnet 5 - scenario names are plain ASCII file names, same assumption load_scenario's callers already make
+		std::wstring wScenarioName(scenarioName.begin(), scenarioName.end());
+		if (!gameWindow->load_scenario(wScenarioName))
+			LOG_ERROR("Failed to load scenario \"%s\"", scenarioName.c_str());
 		manager.change_window(manager.get_window_from_id("GAMEPLAY"));
 	}
 
@@ -224,13 +240,13 @@ int game_main(int argc, char* argv[])
 			if (event->is<sf::Event::FocusLost>())
 			{
 				enableLogic = false;
-				game->on_focus();
+				game->on_unfocus();
 			}
 
 			if (event->is<sf::Event::FocusGained>())
 			{
 				enableLogic = true;
-				game->on_unfocus();
+				game->on_focus();
 			}
 
 			if (event->is<sf::Event::Closed>())

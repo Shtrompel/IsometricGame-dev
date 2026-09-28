@@ -104,6 +104,51 @@ struct IVecCompare
 	}
 };
 
+// Code made by Claude Sonnet 5 - a barrier sprite standing on the ground, and a light that casts its sheared shadow
+struct ShadowCaster
+{
+	sf::Sprite *sprite;
+	sf::Vector2f base;
+};
+
+struct ShadowLight
+{
+	sf::Vector2f screenPos;
+	sf::Vector3f color;
+	float radius;
+};
+
+// Code made by Claude Sonnet 5 - per-light sheared cutout shadows into a visibility mask, accumulated across frames to soften the jittered edges
+struct ShadowPathtraceState
+{
+	bool ready = false;
+	sf::RenderTexture occluderTarget;
+	sf::RenderTexture sampleTarget;
+	sf::RenderTexture accum[2];
+	int accumIndex = 0;
+	sf::Shader lightShader;
+	sf::Shader accumulateShader;
+	sf::Shader occluderCutoutShader;
+	sf::Shader castShader;
+
+	std::vector<ShadowCaster> casters;
+	std::vector<ShadowLight> lights;
+
+	float lightHeight = 160.f;
+	float softness = 6.f;
+	float maxHeightRatio = 0.8f;
+	float fade = 0.5f;
+	int strips = 12;
+	int tileMargin = 6;
+
+	bool haveLastOrientation = false;
+	sf::Vector2i lastWorldPos;
+	int lastRotation = 0;
+	sf::Vector2f lastScale;
+
+	bool justReset = true;
+};
+
 struct RendererClass
 {
 	sf::RenderWindow *window = nullptr;
@@ -116,6 +161,7 @@ struct RendererClass
 
 	bool drawPath = true;
 	bool halfWalls = false;
+	bool renderShaders = false;
 
 	t_sprite spriteGrass = -1;
 	t_sprite spriteTileSelected = -1;
@@ -130,8 +176,14 @@ struct RendererClass
 
 	AssetManager *assets = nullptr;
 
+	sf::Shader shader;
+
+	ShadowPathtraceState shadowPathtrace;
+
 	RendererClass();
 	RendererClass(sf::RenderWindow *window, sf::View *view, AssetManager *assets);
+
+	sf::RenderStates get_render_states(sf::Sprite* sprite);
 
 	void render_grid(Chunks *chunks);
 	FRect render_object(GameBody* body, bool bSearch, ImageAlphaGrid* gridOut = nullptr);
@@ -253,11 +305,22 @@ struct RendererClass
 		UpgradeTree *buildTree,
 		Chunks *chunks,
 		GameMode gameMode,
-		std::set<sf::Vector2i, IVecCompare> &suggestionBuilds);
+		std::set<sf::Vector2i, IVecCompare> &suggestionBuilds,
+		int affordableCount);
 
 	void render_gui(GameData &data, float fps);
 
 	void sub_render_grid(Chunks *chunks, int idx, int idy, sf::Sprite *tileSprite);
+
+	// Precalculate and assing lightning data to the shader
+	void prepare_lighting(const std::vector<GameBody*>& lightEmittingBodies);
+
+	// Code made by Claude Sonnet 5 - double-buffered shadow pathtracing pipeline
+	void init_shadow_targets(unsigned width, unsigned height);
+	void collect_shadow_casters(Chunks *chunks);
+	void render_shadow_lights();
+	void accumulate_shadows();
+	void composite_shadows();
 
 	template <typename U>
 	void sub_render_tile(
@@ -288,7 +351,7 @@ struct RendererClass
 
 		s.setOrigin({originX, originY});
 
-		window->draw(s);
+		window->draw(s, get_render_states(&s));
 	}
 
 	// Return the position of the rop left corner of where 
@@ -331,7 +394,7 @@ struct RendererClass
 		s.setPosition({x, y});
 		s.setScale(scale);
 
-		window->draw(s);
+		window->draw(s, get_render_states(&s));
 
 		// Draw rect representing the bounds of the sprite
 		if (drawBorders)
@@ -374,4 +437,4 @@ struct RendererClass
 		bool relevantSegment = true);
 };
 
-#endif // _GAME_GRAPHICS
+#endif // _GAME_GRAPHICS

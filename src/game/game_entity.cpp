@@ -298,83 +298,6 @@ std::string EntityStats::to_string()
 	return to_json().dump(1).c_str();
 }
 
-// EntityStatsContainer
-
-EntityStatsContainer::EntityStatsContainer()
-{
-}
-
-EntityStatsContainer::~EntityStatsContainer()
-{
-	for (auto &x : statMap)
-		delete x.second;
-}
-
-void EntityStatsContainer::insert(
-	t_idpair pair,
-	t_id key,
-	const EntityStats &stats)
-{
-	keys[pair] = key;
-	statMap[key] = new EntityStats(EntityStats(stats));
-}
-
-EntityStats *EntityStatsContainer::operator[](
-	t_id key)
-{
-	try
-	{
-		return statMap.at(key);
-	}
-	catch (const std::out_of_range &e)
-	{
-		WARNING("Can't found stats with key %d: %s", key, e.what());
-		return nullValue;
-	}
-}
-
-EntityStats *EntityStatsContainer::get(
-	t_idpair pair)
-{
-	try
-	{
-		return operator[](keys.at(pair));
-	}
-	catch (const std::out_of_range &e)
-	{
-		WARNING(
-			"Can't found stats with pair %s: %s",
-			CSTR(pair), e.what());
-		return nullValue;
-	}
-}
-
-bool EntityStatsContainer::has(t_id key) const
-{
-	return statMap.count(key);
-}
-
-bool EntityStatsContainer::has(
-	t_idpair pair) const
-{
-	return keys.count(pair);
-}
-
-size_t EntityStatsContainer::size() const
-{
-	return statMap.size();
-}
-
-EntityStatsContainer::iterator EntityStatsContainer::begin()
-{
-	return statMap.begin();
-}
-
-EntityStatsContainer::iterator EntityStatsContainer::end()
-{
-	return statMap.end();
-}
-
 // Entity
 
 EntityBody::EntityBody(
@@ -417,6 +340,7 @@ void EntityBody::apply_data(GameBodyConfig *config)
 	auto &stats = *static_cast<EntityStats *>(config);
 
 	this->hp = stats.hp;
+
 	this->radius = radius;
 	this->alignment = stats.alignment;
 	this->inventorySize = stats.inventorySize;
@@ -424,6 +348,7 @@ void EntityBody::apply_data(GameBodyConfig *config)
 	this->maxSpeed = stats.maxSpeed;
 	this->maxForce = stats.maxForce;
 	this->aggressive = stats.aggressive;
+	this->isLightSource = stats.isLightSource;
 	this->timerAction->set_length(stats.cooldownAction);
 	this->timerPath->set_length(stats.cooldownPath);
 	this->props = stats.props;
@@ -551,7 +476,15 @@ bool EntityBody::search_entity()
 		}
 
 		float dist = vec_distsq(this->pos, g->pos);
-		dist = dist * weight * multiplier;
+		dist = dist + weight * multiplier;
+
+		// Code made by Claude Sonnet 5 - berserk entities draw enemy attention
+		if (g->type == BodyType::ENTITY)
+		{
+			const EntityBody *e = dynamic_cast<const EntityBody *>(g);
+			if (e && e->isBerserk)
+				dist *= BERSERK_TARGET_DISTANCE_SCALE;
+		}
 		return dist;
 	};
 
@@ -663,7 +596,11 @@ bool EntityBody::search_entity()
 
 void EntityBody::go_to_building(PathData &path)
 {
-	if (path.destination->building)
+	// Code made by Claude Sonnet 5 - generate_path() returns a destination-less
+	// PathData ({}) when the start tile is a barrier or already equals the
+	// target (e.g. an aggressive entity searching while standing on its
+	// target's tile); guard the dereference instead of crashing.
+	if (path.destination && path.destination->building)
 	{
 		BuildingBody* bb;
 		bb = static_cast<BuildingBody*>(path.destination->building);
@@ -678,9 +615,82 @@ int EntityBody::get_hp() const
 	return this->hp;
 }
 
-int &EntityBody::get_hp()
+void EntityBody::set_hp(int value)
 {
-	return this->hp;
+	this->hp = value;
+}
+
+double EntityBody::get_base(EntityPropertyNums n) const
+{
+	return props.num_get_or(n, 0.0);
+}
+
+double EntityBody::get_delta(EntityPropertyNums n) const
+{
+	auto itr = propsDelta.find(n);
+	return itr == propsDelta.end() ? 0.0 : itr->second;
+}
+
+double EntityBody::get_num(EntityPropertyNums n) const
+{
+	return get_base(n) + get_delta(n);
+}
+
+void EntityBody::add_delta(EntityPropertyNums n, double amount)
+{
+	double value = get_delta(n) + amount;
+	if (std::abs(value) < 1e-9)
+		propsDelta.erase(n);
+	else
+		propsDelta[n] = value;
+
+	updateInfo = true;
+}
+
+void EntityBody::apply_aura(
+	size_t sourceId,
+	const std::map<EntityPropertyNums, double> &deltas,
+	t_seconds expire)
+{
+	AuraLease &lease = auraLeases[sourceId];
+
+	if (lease.deltas != deltas)
+	{
+		for (auto &[n, amount] : lease.deltas)
+			add_delta(n, -amount);
+		for (auto &[n, amount] : deltas)
+			add_delta(n, amount);
+		lease.deltas = deltas;
+	}
+
+	lease.expire = expire;
+}
+
+void EntityBody::expire_auras(t_seconds now)
+{
+	for (auto itr = auraLeases.begin(); itr != auraLeases.end();)
+	{
+		if (itr->second.expire > now)
+		{
+			++itr;
+			continue;
+		}
+
+		for (auto &[n, amount] : itr->second.deltas)
+			add_delta(n, -amount);
+		itr = auraLeases.erase(itr);
+	}
+}
+
+void EntityBody::register_kill()
+{
+	++killCount;
+
+	int threshold = (int)get_num(EntityPropertyNums::BERSERK_KILL_THRESHOLD);
+	if (!isBerserk && threshold > 0 && killCount >= threshold)
+		isBerserk = true;
+
+	updateInfo = true;
 }
 
 bool EntityBody::set_path(PathData &&pathData)
@@ -733,6 +743,9 @@ void EntityBody::change_action(Action action)
 		[[fallthrough]];
 		/* fallthrough */
 	case Action::BUILD:
+		[[fallthrough]];
+		/* fallthrough */
+	case Action::ATTACK:
 		if (spriteAction != -1)
 			change_sprite(spriteAction);
 		break;
@@ -878,7 +891,10 @@ void EntityBody::logic_aggresive()
 				break;
 			}
 
-			GameData::damage_body(target, (float)this->attack);
+			float attack = (float)get_num(EntityPropertyNums::ATTACK);
+			if (isBerserk)
+				attack *= BERSERK_ATTACK_MULTIPLIER;
+			GameData::damage_body(target, attack, this);
 			if (target->get_hp() <= 0)
 			{
 				this->set_target(nullptr);
@@ -992,6 +1008,31 @@ void EntityBody::update_path()
 		-1.f));
 }
 
+int EntityBody::get_direction_frame(int rotation)
+{
+	const float CALIBRATION_OFFSET = -1/16.f;
+
+	sf::Vector2f dir = vel;
+	// Code made by Claude Sonnet 5 - while attacking or flinching from a hit,
+	// vel no longer reflects "walking toward the target" (it's zeroed by the
+	// action switch, then nudged around by separation jitter from nearby
+	// bodies), so always face the target directly instead of trusting vel
+	if (target &&
+		(action == Action::ATTACK || action == Action::ATTACKED))
+	{
+		dir = target->pos - this->pos;
+	}
+
+	sf::Vector2f screenVel = { dir.x - dir.y, dir.x + dir.y };
+	float angle = atan2f(-screenVel.y, screenVel.x);
+	angle -= (float)rotation * (float)M_PI_2;
+	angle -= CALIBRATION_OFFSET;
+	angle = math_mod(angle, (float)M_2PI);
+	int row = (int)(angle / ((float)M_2PI / 8.f) + 0.5f);
+	row += 3;
+	return row % 8;
+}
+
 void EntityBody::update(float delta)
 {
 	const float MAX_DELTA = 1.f;
@@ -1003,11 +1044,18 @@ void EntityBody::update(float delta)
 	delta = std::min(delta, MAX_DELTA);
 
 	// If hp depleted, entity is dead
-	if (hp <= 0 || dead)
+	if (get_hp() <= 0 || dead)
 	{
+		// Code made by Claude Sonnet 5 - this branch re-executes every
+		// frame while a dead entity lingers before cleanup, so the death
+		// must only be recorded once, on the alive-to-dead edge
+		if (!dead)
+			context->record_death(this);
 		dead = true;
 		return;
 	}
+
+	expire_auras(context->get_time());
 
 	// Get  tile speed bonus, if available
 	{
@@ -1024,9 +1072,24 @@ void EntityBody::update(float delta)
 	//				Calculate velocity
 
 	float maxSpeed =
-		speedMultiplier *
+		(float)get_num(EntityPropertyNums::SPEED_MULTIPLIER) *
 		this->maxSpeed;
 
+	if (debugFollowMouse)
+	{
+		FVec dif = debugTarget - this->pos;
+		if (vec_lensq(dif) > 0.0001f)
+		{
+			vec_normalize(dif);
+			vel = dif * maxSpeed;
+		}
+		else
+		{
+			vel = {0.f, 0.f};
+		}
+	}
+	else
+	{
 	FVec destination;
 	FVec force;
 	// Calculate path following direction
@@ -1164,6 +1227,7 @@ void EntityBody::update(float delta)
 		vec_normalize(vel);
 		vel *= maxSpeed;
 	}
+	}
 
 	bool moved = vel != sf::Vector2f{0.f, 0.f};
 
@@ -1185,6 +1249,27 @@ void EntityBody::update(float delta)
 			context->move_entity(this, oldPos, newPos);
 		}
 	}
+	// Code made by Claude Sonnet 5 - work/attack/hit animations have no velocity to drive them, so give them their own steady clock instead of freezing on the last walk frame
+	else if (action == Action::WORK || action == Action::BUILD || action == Action::ATTACK || action == Action::ATTACKED)
+	{
+		this->animTime += STATIONARY_ANIM_SPEED * delta;
+		this->animFrame = (int)(this->animTime);
+	}
+
+	// Code made by Claude Sonnet 5 - integrate and decay the knockback from a hit, stopping at barriers
+	if (vec_lensq(knockVel) > 0.0001f)
+	{
+		sf::Vector2f oldPos = this->pos;
+		sf::Vector2f newPos = oldPos + knockVel * delta;
+		if (!context->body_is_collision(newPos, rectSize))
+			context->move_entity(this, oldPos, newPos);
+		else
+			knockVel = {0.f, 0.f};
+
+		knockVel *= std::max(0.f, 1.f - 8.f * delta);
+	}
+	else
+		knockVel = {0.f, 0.f};
 
 	logic();
 
@@ -1259,7 +1344,8 @@ json EntityBody::to_json() const
 	j["entityType"] = entityType;
 	j["id"] = id;
 	j["hp"] = hp;
-	j["attack"] = attack;
+	j["killCount"] = killCount;
+	j["isBerserk"] = isBerserk;
 	j["animTime"] = animTime;
 	// j["nearbyBuilds"] = nearbyBuilds;
 	j["pathData"] = pathData;
@@ -1291,7 +1377,10 @@ void EntityBody::from_json(const json &j)
 		j.at("entityType").get_to(entityType);
 		j.at("id").get_to(id);
 		j.at("hp").get_to(hp);
-		j.at("attack").get_to(attack);
+		if (j.count("killCount"))
+			j.at("killCount").get_to(killCount);
+		if (j.count("isBerserk"))
+			j.at("isBerserk").get_to(isBerserk);
 		j.at("animTime").get_to(animTime);
 		// j.at("nearbyBuilds").get_to(nearbyBuilds);
 		j.at("pathData").get_to(pathData);
@@ -1706,7 +1795,7 @@ void EntityCitizen::recalculate_worker_stats()
 	if (!success || !baseStats) return;
 
 	float calcHp = baseStats->hp;
-	float calcAttack = (float)this->attack; // Or baseStats->attack if you add it to EntityStats later
+	float calcAttack = (float)baseStats->props.num_get_or(EntityPropertyNums::ATTACK, 1.0);
 	float calcSpeed = baseStats->maxSpeed;
 	float calcActionCooldown = baseStats->cooldownAction;
 
@@ -1731,7 +1820,7 @@ void EntityCitizen::recalculate_worker_stats()
 
 	// 3. Apply finalized stats
 	this->hp = (int)calcHp;
-	this->attack = (int)calcAttack;
+	this->props.num_set(EntityPropertyNums::ATTACK, (double)(int)calcAttack);
 	this->maxSpeed = calcSpeed;
 	if (calcActionCooldown > 0.0f) {
 		this->timerAction->set_length(calcActionCooldown);
@@ -2252,6 +2341,7 @@ void EntityCitizen::logic_worker()
 						workplace->weightCap,
 						workplace->rStoreCap))
 				{
+					Resources workplaceStorageBefore = workplace->rStorage;
 					Resources::transfer(
 						this->rInventory,
 						workplace->rStorage,
@@ -2259,6 +2349,7 @@ void EntityCitizen::logic_worker()
 						transferSize,
 						workplace->rStoreCap,
 						workplace->weightCap);
+					context->record_resource_gain_delta(workplaceStorageBefore, workplace->rStorage);
 				}
 				else
 				{
@@ -2353,6 +2444,7 @@ void EntityCitizen::logic_worker()
 
 			build->updateInfo = true;
 
+			Resources buildStorageBefore = build->rStorage;
 			if (!Resources::transfer(
 					rInventory,
 					build->rStorage,
@@ -2364,6 +2456,7 @@ void EntityCitizen::logic_worker()
 			{
 				logic_reset();
 			}
+			context->record_resource_gain_delta(buildStorageBefore, build->rStorage);
 		}
 	}
 	break;

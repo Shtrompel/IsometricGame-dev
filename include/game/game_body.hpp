@@ -2,6 +2,7 @@
 #define _GAME_BODY
 
 #include <SFML/System/Vector2.hpp>
+#include <SFML/System/Vector3.hpp>
 
 #include "utils/globals.hpp"
 #include "libs/FastNoiseLite.h"
@@ -64,15 +65,37 @@ struct PropertySet
 
 	PropertySet() {}
 
-	void append(const PropertySet<t_use, t_property> &other)
+	std::vector<t_use> append(const PropertySet<t_use, t_property> &other)
 	{
+		std::vector<t_use> out;
 		auto otherNumItr = other.nums.begin();
 		for (; otherNumItr != other.nums.cend(); ++otherNumItr)
 		{
 			this->nums[otherNumItr->first] = otherNumItr->second;
 		}
 
-		this->uses.insert(other.uses.begin(), other.uses.end());
+		for (const t_use &u : other.uses)
+		{
+			if (this->uses.insert(u).second)
+				out.push_back(u);
+		}
+
+		return out;
+	}
+
+	std::vector<t_use> remove_uses(const PropertySet<t_use, t_property> &other)
+	{
+		std::vector<t_use> out;
+		for (const t_use &u : other.uses)
+		{
+			auto itr = this->uses.find(u);
+			if (itr == this->uses.end())
+				continue;
+
+			this->uses.erase(itr);
+			out.push_back(u);
+		}
+		return out;
 	}
 
 	// Uses
@@ -84,12 +107,21 @@ struct PropertySet
 	inline void bool_set(t_use x, bool b) { uses.insert(x); }
 	inline size_t bool_size() const { return uses.size(); }
 	inline BoolItr bool_itr() { return BoolItr{&uses}; }
+	inline void bool_unset(t_use x) { uses.erase(x); }
 
 	// Properties
 	inline void num_reset() { nums.clear(); }
 	bool num_is(const t_property x) const { return nums.count(x); }
-	inline double num_set(t_property x, double d) { return (nums[x] = d); }
-	double num_get(t_property x) { return nums.at(x); }
+	inline double num_set(t_property x, double d) { 
+		nums[x] = d;
+		return nums[x]; 
+	}
+	double num_get(t_property x) const { return nums.at(x); }
+	double num_get_or(t_property x, double def) const
+	{
+		auto itr = nums.find(x);
+		return itr == nums.end() ? def : itr->second;
+	}
 	bool num_is(size_t i) const { return num_is((t_property)i); }
 	bool num_get(size_t i) const { return bool_get((t_property)i); }
 	size_t num_size() const { return nums.size(); }
@@ -234,6 +266,14 @@ struct GameBody : Variant, AbstractCanTarget
 	static inline int tmpHp = -1; // Null get_hp placeholder
 	bool dead = false; // Add to json copression
 
+	// Whether this body is currently tagged in the ENUM_LIGHT_SOURCE tree.
+	// Set via JSON authoring or a runtime state toggle; GameData::get_trees()
+	// reads this to decide tree membership on creation/deletion/movement.
+	bool isLightSource = false;
+
+	float lightRadius = 600.f;
+	sf::Vector3f lightColor = {1.f, 1.f, 1.f};
+
 	// Rendering
 	sf::Vector2i start = {-1, -1};
 	sf::Vector2i end = {-1, -1};
@@ -255,7 +295,7 @@ struct GameBody : Variant, AbstractCanTarget
 	std::string get_ptr_str() const;
 
 	virtual int get_hp() const;
-	virtual int& get_hp();
+	virtual void set_hp(int value);
 	virtual GameBody* get_target() override;
 
 #define EPIC_TEST3()\
@@ -277,11 +317,7 @@ struct GameBody : Variant, AbstractCanTarget
 		return pos.x + pos.y;
 	}
 
-	bool operator<(const GameBody &other) const
-	{
-		// Depth sorting for rendering
-		return this->depth() < other.depth();
-	}
+	bool operator<(const GameBody &other) const;
 
 	void change_sprite(t_sprite sprite);
 

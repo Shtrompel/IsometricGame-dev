@@ -43,7 +43,9 @@ static const std::unordered_map<std::string, int> TEST_MAP_STR2INT = {
 	{"FIGHTING",  	4}, // Check if entities fight each other properly
 	{"SYSTEM", 	  	5}, // Simple resource systems
 	{"GAME SYSTEM",	6}, // System and builders setup
-	{"ELECTRICTY",  7} // Electricity system
+	{"ELECTRICITY",	7}, // System and builders setup}
+	{"ELECTRICTY",  8}, // Electricity system
+	{"SCENARIO",  9},
 };
 
 static int window_gameplay_test_map_str2int(const std::string& testStr)
@@ -113,6 +115,9 @@ struct SelectionGameContext
 	std::vector<UpgradeTree *> upgradeTree;
 	std::vector<UpgradeTree *>::const_iterator upgradeTreeItr;
 	int suggestionUpgrade = 0;
+
+	// How many of the suggested building's can be afforded
+	int affordableCount = -1;
 };
 
 struct InteractionGameContext
@@ -166,7 +171,8 @@ struct GameGameFlags
 {
 	bool godMode = false;
 	bool enableConstruction = true;
-	bool compactJson = true;
+	bool compactJson = false;
+	bool paused = false;
 };
 
 void depth_sort(
@@ -191,6 +197,11 @@ struct WindowGameplay : GameWindow
 	InteractionGameContext inputCtx;
 	GuiGameContext guiCtx;
 	GameGameFlags flags;
+
+	EntityBody *debugFollowEntity = nullptr;
+
+	FastLabel::Ptr labelTimelineCurrent = nullptr;
+	FastLabel::Ptr labelTimelineNext = nullptr;
 
 	inline BuildingBase *suggestion_build()
 	{
@@ -248,7 +259,11 @@ struct WindowGameplay : GameWindow
 	void mouse_focus_end(
 		const sf::Vector2i &a,
 		const sf::Vector2i &b) override;
-	
+
+	void evict_overlapping_suggestions(
+		const sf::Vector2i &pos,
+		const IVec &size);
+
 	void keyboard_pressed(sf::Keyboard::Key key) override;
 
 	void keyboard_released(sf::Keyboard::Key key) override;
@@ -273,6 +288,8 @@ struct WindowGameplay : GameWindow
 		bool compact);
 
 	bool jsonpack_to_game(const t_jsonpack &);
+	
+	bool load_scenario(const std::wstring &name);
 
 	t_jsonpack jsonpack_from_game();
 
@@ -289,6 +306,8 @@ struct WindowGameplay : GameWindow
 	bool gui_enable_group(const std::string &groupName);
 
 	bool gui_disable_group(const std::string &groupName);
+
+	bool gui_hide_window(const std::string& windowName);
 
 	bool gui_update_upgrade_info(
 		UpgradeTree *info,

@@ -1,4 +1,5 @@
 #include "window/window_gameplay.hpp"
+#include <iomanip>
 
 #include "game/game_data.hpp"
 #include "utils/class/resources.hpp"
@@ -198,6 +199,24 @@ bool WindowGameplay::load()
   flags.enableConstruction =
       data.constBoolean[(int)ConstantBoolean::ENABLE_CONSTRUCTIONS];
 
+  // Load shaders
+  if (managerParent->get_settings().enableShaders)
+  {
+    if (!renderer.shader.loadFromFile(
+      "assets/shaders/testVert.vert", 
+      "assets/shaders/lazy_lit.frag"))
+      {
+        return false;
+      }
+    
+    
+    renderer.shader.setUniform("texture", sf::Shader::CurrentTexture);
+    renderer.renderShaders = true;
+
+    renderer.init_shadow_targets(window->getSize().x, window->getSize().y);
+  }
+
+  // Load textures
   try
   {
     for (auto &texInfo : jsonMap["resources"]["resources"])
@@ -265,6 +284,16 @@ bool WindowGameplay::load()
       divisions = count;
     }
 
+    // Code made by Claude Sonnet 5 - "anim_mode": "pingpong" on a texture
+    // makes every sprite sheet cut from it play back and forth instead of
+    // looping; data-driven per-texture rather than hardcoded per-action
+    bool pingpong = false;
+    if (texInfo.contains("anim_mode"))
+    {
+      std::string mode = str_lowercase(texInfo["anim_mode"].get<std::string>());
+      pingpong = (mode == "pingpong");
+    }
+
     try
     {
       std::string subpath = "";
@@ -276,7 +305,7 @@ bool WindowGameplay::load()
       std::string name = texInfo["name"].get<std::string>();
 
       // Note the added subpath.c_str() argument here
-      assets.load_texture(name.c_str(), subpath.c_str(), count, divisions);
+      assets.load_texture(name.c_str(), subpath.c_str(), count, divisions, "png", pingpong);
     }
     catch (nlohmann::detail::type_error &e)
     {
@@ -445,7 +474,6 @@ bool WindowGameplay::run_test_generator(int testId)
   // Map test IDs directly to their execution lambdas
   std::unordered_map<int, std::function<void(void)>> tests;
 
-  // --- 0: TEST_MAZE ---
 
   tests[0] = [this, &generateChunks]() {
 
@@ -484,8 +512,9 @@ bool WindowGameplay::run_test_generator(int testId)
             b->entityLimit = 12;
           break;
         case 0xFFFFFFFF:
+        break;
           end = p;
-          if (data.add_building(p, BuildingType::ROAD, false))
+          if (b = data.add_building(p, BuildingType::ROAD, false))
           {
           }
           break;
@@ -499,7 +528,6 @@ bool WindowGameplay::run_test_generator(int testId)
   };
 
   // --- 2: RANDOM ENTITIES ---
-  // Drops a chaotic mix of citizens and brutes in an open field
   tests[2] = [this, &generateChunks]()
   {
     generateChunks(3);
@@ -525,7 +553,6 @@ bool WindowGameplay::run_test_generator(int testId)
   };
 
   // --- 3: RANDOM ---
-  // Fully chaotic map with random resources, buildings, and entities
   tests[3] = [this, &generateChunks, &autoAddResources]()
   {
     generateChunks(4);
@@ -555,25 +582,31 @@ bool WindowGameplay::run_test_generator(int testId)
 
   // --- 4: FIGHTING ---
   // Sets up a functional military outpost besieged by an enemy portal
-  tests[4] = [this, &generateChunks]()
+  tests[4] = [this, generateChunks]()
   {
     generateChunks(3);
 
     // Friendly Outpost
     data.add_building({-3, 0}, BuildingType::HOME, false);
-    data.add_building({-1, 0}, BuildingType::ARMORY, false); // Trains soldiers
-    data.add_building({-1, -2}, BuildingType::TOWER, false); // Watcher support
-    data.add_building({-1, 2}, BuildingType::TOWER, false);
+    // data.add_building({-1, 0}, BuildingType::ARMORY, false); // Trains soldiers
+    data.add_building({-1, -2}, BuildingType::ARMORY, false); // Watcher support
+    data.add_building({-1, 2}, BuildingType::ARMORY, false);
+
+    data.add_building({-4, -4}, BuildingType::TEMPLE, false);
 
     // The Threat
     BuildingBase *spawn = data.add_building({8, 0}, BuildingType::ENEMY_SPAWN, false);
     if (spawn)
     {
-      spawn->entityLimit = 8;
+      spawn->spawn = SpawnInfo{
+        SERIALIZABLE_ENEMY,
+        t_idpair{ ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE}
+      };
+      spawn->entityLimit = 2;
     }
 
     // Pre-spawn some enemies to instigate immediate conflict
-    for (int i = -2; i <= 2; ++i)
+    for (int i = 0; i < 0; ++i)
     {
       auto sEnemy = data.get_entity_stats(ENUM_ENEMY_TYPE, (t_id)EnemyType::BRUTE);
       data.add_entity_enemy({7.f, (float)i}, sEnemy);
@@ -583,7 +616,6 @@ bool WindowGameplay::run_test_generator(int testId)
   };
 
   // --- 5: SYSTEM ---
-  // A complete, self-sustaining resource loop (Mine -> Storage -> Logistics)
   tests[5] = [this, &generateChunks, &autoAddResources]()
   {
     generateChunks(3);
@@ -601,7 +633,6 @@ bool WindowGameplay::run_test_generator(int testId)
   };
 
   // --- 6: GAME SYSTEM ---
-  // Bootstraps a logistics loop alongside a Construction Department
   tests[6] = [this, &generateChunks, &autoAddResources]()
   {
     generateChunks(3);
@@ -620,7 +651,6 @@ bool WindowGameplay::run_test_generator(int testId)
   };
 
   // --- 7: ELECTRICITY ---
-  // Tests power generation, storage routing, and consumption via upgrades
   tests[7] = [this, &generateChunks]()
   {
     generateChunks(2);
@@ -645,6 +675,46 @@ bool WindowGameplay::run_test_generator(int testId)
     }
 
     focus_on({2.f, 0.f});
+  };
+
+  // --- 8: FOLLOW MOUSE ---
+  tests[8] = [this, &generateChunks]()
+  {
+    generateChunks(1);
+
+    auto sCitizen = data.get_entity_stats(ENUM_CITIZEN_JOB, (t_id)CitizenJob::NONE);
+    EntityCitizen *e = data.add_entity_citizen({0.f, 0.f}, sCitizen);
+    if (e)
+    {
+      e->debugFollowMouse = true;
+      debugFollowEntity = e;
+    }
+
+    focus_on({0.f, 0.f});
+  };
+
+  // --- 9: Scenario ---
+  tests[9] = [this, &generateChunks]()
+  {
+    generateChunks(3);
+
+    BuildingBase* b = nullptr;
+
+    data.add_building({0, 0}, BuildingType::HOME, false);
+    data.add_building({1, 0}, BuildingType::HOME, false);
+    data.add_building({2, 0}, BuildingType::HOME, false);
+
+    data.add_building({0, 3}, BuildingType::CONSTRUCTION_DEPARTMENT);
+
+    data.add_building({1, 3}, BuildingType::ARMORY, false);
+
+    b = data.add_building({2, 3}, BuildingType::STORAGE, false);
+    if (b)
+      b->rStorage = Resources{40, 20, 10};
+
+    data.add_building({0, 10}, BuildingType::ENEMY_SPAWN, false);
+    data.add_building({3, 10}, BuildingType::ENEMY_SPAWN, false);
+    data.add_building({6, 10}, BuildingType::ENEMY_SPAWN, false);
   };
 
   // Run the specified test
@@ -970,13 +1040,35 @@ bool WindowGameplay::init()
             {
             case GameMode::BUILD:
             {
+              if (gameWindow->selectCtx.buildSelected.empty() || !gameWindow->selectCtx.buildSelected.count(0))
+                  break;
+
               UpgradeTree *tree = dynamic_cast<UpgradeTree *>(
                   gameWindow->selectCtx.buildSelected[0]);
               assert(tree);
-              for (auto &tp : gameWindow->selectCtx.suggestionBuilds)
+
+              // Recalculate exactly on click. Written by AI
+              int affordable = INT_MAX;
+              if (tree->build.empty() || gameWindow->flags.godMode) {
+                  affordable = gameWindow->selectCtx.suggestionBuilds.size();
+              } else {
+                  gameWindow->data.calculate_resources();
+                  for (auto& pair : tree->build.resCount) {
+                      if (pair.second > 0) {
+                          int available = gameWindow->data.resourceContext.resources.resCount[pair.first];
+                          affordable = std::min(affordable, available / pair.second);
+                      }
+                  }
+              }
+              
+              auto it = gameWindow->selectCtx.suggestionBuilds.rbegin();
+              for (;it != gameWindow->selectCtx.suggestionBuilds.rend(); ++it)
+              {
+                sf::Vector2i tp = *it;
                 gameWindow->data.queue_add_build(
                     tp, tree, gameWindow->flags.enableConstruction,
                     !gameWindow->flags.godMode);
+              }
               gameWindow->selectCtx.suggestionBuilds.clear();
               break;
             }
@@ -1001,13 +1093,18 @@ bool WindowGameplay::init()
             {
               if (selection->upgradeTree.empty())
                 break;
+              
               std::vector<BuildingBase *> builds;
               UpgradeTree *tree = *selection->upgradeTreeItr;
+              
               assert(tree);
+              
               for (auto &tp : selection->suggestionBuilds)
               {
+                
                 BuildingBody *body =
                     gameWindow->data.chunks->get_build(tp.x, tp.y);
+                
                 if (body && std::find(builds.begin(), builds.end(),
                                       body->base) == builds.end())
                 {
@@ -1015,7 +1112,10 @@ bool WindowGameplay::init()
                   gameWindow->upgrade_building(body->base, tree);
                 }
               }
+              
               selection->suggestionBuilds.clear();
+              gameWindow->gui_hide_window("WindowUpgrade");
+
             }
             break;
             default:
@@ -1083,8 +1183,10 @@ void WindowGameplay::update(float delta)
   resourceContext.resources = Resources::res_empty(&weights);
   resourceContext.power = 0;
 
-  auto itr = buildings.begin();
-  while (itr != buildings.end())
+  // Update buildings
+  if (!flags.paused) {
+    auto itr = buildings.begin();
+    while (itr != buildings.end())
   {
     bool removed = false;
     BuildingBase *b = (*itr);
@@ -1173,64 +1275,70 @@ void WindowGameplay::update(float delta)
     if (!removed)
       itr++;
   }
+  }
 
-  size_t removedEntities = 0u;
-  for (auto itr = data.bodiesContext.bodies.begin();
-       itr != data.bodiesContext.bodies.end();)
+  // Object logic
+  if (!flags.paused)
   {
-    GameBody *body = *itr;
-    assert(body);
-
-    if (body->dead)
+    size_t removedEntities = 0u;
+    for (auto itr = data.bodiesContext.bodies.begin();
+        itr != data.bodiesContext.bodies.end();)
     {
-      for (auto &x : data.changesContext.bodyQueue)
+      GameBody *body = *itr;
+      assert(body);
+
+      if (body->dead)
       {
-        if (x.target == body)
-          x.target = nullptr;
+        for (auto &x : data.changesContext.bodyQueue)
+        {
+          if (x.target == body)
+            x.target = nullptr;
+        }
+
+        if (body->type == BodyType::ENTITY)
+        {
+          EntityBody *eb = dynamic_cast<EntityBody *>(body);
+
+          // Close entity UI
+          if (has_entity_info(eb))
+          {
+            show_entity_info(eb, false);
+          }
+          if (data.infoEntity == eb)
+          {
+            data.infoEntity = nullptr;
+          }
+
+          data.delete_entity(eb);
+        }
+
+        data.delete_game_body_generic(body);
+        itr = data.bodiesContext.bodies.erase(itr);
+
+        continue;
       }
+      else
+        ++itr;
+
+      // Movement
+      body->update(delta);
 
       if (body->type == BodyType::ENTITY)
       {
-        EntityBody *eb = dynamic_cast<EntityBody *>(body);
-
-        // Close entity UI
-        if (has_entity_info(eb))
+        EntityBody *entity = dynamic_cast<EntityBody *>(body);
+        if (entity->updateInfo)
         {
-          show_entity_info(eb, false);
-        }
-        if (data.infoEntity == eb)
-        {
-          data.infoEntity = nullptr;
-        }
-
-        data.delete_entity(eb);
-      }
-
-      data.delete_game_body_generic(body);
-      itr = data.bodiesContext.bodies.erase(itr);
-
-      continue;
-    }
-    else
-      ++itr;
-
-    // Movement
-    body->update(delta);
-
-    if (body->type == BodyType::ENTITY)
-    {
-      EntityBody *entity = dynamic_cast<EntityBody *>(body);
-      if (entity->updateInfo)
-      {
-        entity->updateInfo = false;
-        if (has_entity_info(entity))
-        {
-          show_entity_info(entity, true);
+          entity->updateInfo = false;
+          if (has_entity_info(entity))
+          {
+            show_entity_info(entity, true);
+          }
         }
       }
     }
   }
 
+  // Add appending entities
   while (!data.changesContext.entityQueue.empty())
   {
     BuildingBase *build = data.changesContext.entityQueue.front();
@@ -1238,6 +1346,7 @@ void WindowGameplay::update(float delta)
     data.changesContext.entityQueue.pop_front();
   }
 
+  // Add appending bodies
   while (!data.changesContext.bodyQueue.empty())
   {
     const BodyQueueData bodyData = data.changesContext.bodyQueue.back();
@@ -1255,16 +1364,16 @@ void WindowGameplay::update(float delta)
       isEntity = true;
     }
 
-    if (isEntity && bodyData.home)
+    if (bodyData.home)
     {
-      if (bodyData.home->storedEntities.size() >= bodyData.home->entityLimit)
+      if (isEntity && bodyData.home->storedEntities.size() >= bodyData.home->entityLimit)
         continue;
-    }
 
-    if (bodyData.home &&
-        bodyData.home->entities.size() >= bodyData.home->entityLimit)
-    {
-      continue;
+      // ??? 
+      if (bodyData.home->entities.size() >= bodyData.home->entityLimit)
+      {
+        continue;
+      }
     }
 
     GameBody *body;
@@ -1288,12 +1397,21 @@ void WindowGameplay::update(float delta)
       {
         EntityCitizen *citizen = dynamic_cast<EntityCitizen *>(entity);
         citizen->home = bodyData.home;
-      }
 
-      if (bodyData.home)
+        if (bodyData.home)
+        {
+          bodyData.home->entities.push_back(entity);
+          bodyData.home->updateInfo = true;
+        }
+      }
+      else if (entity->entityType == EntityType::ENEMY && bodyData.home)
       {
-        bodyData.home->entities.push_back(entity);
-        bodyData.home->updateInfo = true;
+        entity->source = bodyData.home->get_body();
+        if (bodyData.home)
+        {
+          bodyData.home->entities.push_back(entity);
+          bodyData.home->updateInfo = true;
+        }
       }
     }
 
@@ -1307,16 +1425,73 @@ void WindowGameplay::update(float delta)
     body->alignment = bodyData.alignment;
   }
 
+  sf::Vector2f camPos = screen_pos_to_world_pos(
+      (sf::Vector2i)renderer.view->getCenter(), renderer.orientation);
+  auto nearestLights = data.nearest_bodies_quad(
+      camPos, 16, {ENUM_LIGHT_SOURCE, (t_id)LightSource::YES});
+  std::vector<GameBody*> flattened(nearestLights.begin(), nearestLights.end());
+  renderer.prepare_lighting(flattened);
+
   data.changesContext.addedTiles.clear();
   data.changesContext.removedTiles.clear();
+
+
+  data.timeline.update(data.get_time());
+
+
+
   float dif = data.get_time() - start;
   max = std::max(dif, max);
 
   ++data.frameCount;
 }
 
+// Code made by Claude Sonnet 5 - FastLabel's glyph sheet (CHARS_ARRAY in
+// FastLabel.hpp) only covers letters, digits, ":!? " - no punctuation. Any
+// dynamic text (building/resource names) reaching a FastLabel must be
+// filtered through this first, or drawText's per-character sprite lookup
+// asserts on the missing glyph
+static std::string fastlabel_sanitize(const std::string &in)
+{
+  std::string out;
+  for (char c : in)
+    if (strchr(CHARS_ARRAY, c))
+      out += c;
+  return out;
+}
+
+// Code made by Claude Sonnet 5 - display text for the current/next-event
+// HUD widget; purely presentational, so it lives here rather than on
+// Timeline itself
+static const char *mission_type_name(Timeline::MissionType type)
+{
+  switch (type)
+  {
+  case Timeline::MissionType::SURVIVE_TIME:
+    return "Survive";
+  case Timeline::MissionType::SURVIVE_KILLS:
+    return "Defeat Enemies";
+  case Timeline::MissionType::GAIN_RESOURCES:
+    return "Gather Resources";
+  case Timeline::MissionType::BUILD_BUILDINGS:
+    return "Build";
+  case Timeline::MissionType::GAIN_POPULATION:
+    return "Grow Population";
+  case Timeline::MissionType::NONE:
+  default:
+    return "Mission";
+  }
+}
+
 void WindowGameplay::render()
 {
+  if (renderer.renderShaders)
+  {
+    renderer.collect_shadow_casters(&chunks);
+    renderer.render_shadow_lights();
+    renderer.accumulate_shadows();
+  }
+
   depth_sort(guiCtx.renderQueue, data.bodiesContext.bodies,
              renderer.orientation.rotation);
 
@@ -1354,14 +1529,43 @@ void WindowGameplay::render()
 
   inputCtx.searchEntity = false;
 
+  if (renderer.renderShaders)
+  {
+    renderer.composite_shadows();
+  }
+
   // If a building aws selected
   if (selectCtx.suggestionBuilds.size())
   {
     UpgradeTree *tree = nullptr;
-    if (selectCtx.buildSelected.size())
-      tree = dynamic_cast<UpgradeTree *>(selectCtx.buildSelected[0]);
+    if (!selectCtx.buildSelected.empty() && selectCtx.buildSelected.count(0)) 
+    {
+        tree = dynamic_cast<UpgradeTree *>(selectCtx.buildSelected.at(0));
+    }
+
+    // AI generated
+    int affordableCount = INT_MAX;
+
+    if (gameMode == GameMode::BUILD && tree != nullptr)
+    {
+      if (tree->build.empty() || flags.godMode) 
+      {
+            affordableCount = selectCtx.suggestionBuilds.size();
+        } 
+        else 
+        {
+            for (auto& pair : tree->build.resCount) {
+                if (pair.second > 0) {
+                    int available = data.resourceContext.resources.resCount[pair.first];
+                    affordableCount = std::min(affordableCount, available / pair.second);
+                }
+            }
+        }
+    }
+    selectCtx.affordableCount = affordableCount;
+
     renderer.render_suggestion(tree, &chunks, gameMode,
-                               selectCtx.suggestionBuilds);
+                               selectCtx.suggestionBuilds, selectCtx.affordableCount);
   }
 
   tgui::String str = tgui::String::fromNumber(fps);
@@ -1369,7 +1573,48 @@ void WindowGameplay::render()
   IVec mouseTilePos = screen_pos_to_tile_pos(mousePos, renderer.orientation);
   str += vec_str(mouseTilePos);
 
+  if (debugFollowEntity)
+  {
+    debugFollowEntity->debugTarget =
+        screen_pos_to_world_pos(mousePos, renderer.orientation);
+  }
+
   get_widget<tgui::Label>("LabelFramerate")->setText(str);
+
+  {
+    auto visibleEvents = data.timeline.get_visible_events(2);
+    tgui::Panel::Ptr panelEvents = get_widget<tgui::Panel>("PanelTimelineEvents");
+    if (visibleEvents.empty())
+    {
+      panelEvents->setVisible(false);
+    }
+    else
+    {
+      Timeline::TimelineEvent *cur = visibleEvents[0];
+      int curTimePassed = (cur == data.timeline.active)
+          ? (int)data.timeline.eventTimer->time_passed(data.get_time())
+          : 0;
+
+      std::string currentStr = std::string("Current ") + mission_type_name(cur->type);
+      std::string curStatus = cur->get_status_text(&data, curTimePassed);
+      if (!curStatus.empty())
+        currentStr += " " + curStatus;
+      labelTimelineCurrent->setText(fastlabel_sanitize(currentStr));
+
+      std::string nextStr;
+      if (visibleEvents.size() > 1)
+      {
+        Timeline::TimelineEvent *next = visibleEvents[1];
+        nextStr = std::string("Next ") + mission_type_name(next->type);
+        std::string nextStatus = next->get_status_text(&data, 0);
+        if (!nextStatus.empty())
+          nextStr += " " + nextStatus;
+      }
+      labelTimelineNext->setText(fastlabel_sanitize(nextStr));
+
+      panelEvents->setVisible(true);
+    }
+  }
 
   gui.draw();
 }
@@ -1468,14 +1713,25 @@ void WindowGameplay::mouse_pressed(const sf::Vector2i &mousePos)
     if (suggestion.count(p))
       suggestion.erase(p);
     else
+    {
+      IVec treeSize = {1, 1};
+      UpgradeTree *treePtr =
+          dynamic_cast<UpgradeTree *>(selectCtx.buildSelected[0]);
+      assert(treePtr);
+      treeSize = treePtr->size;
+
+      evict_overlapping_suggestions(p, treeSize);
       suggestion.insert(p);
+    }
     // If pressed on  a building, show it's data.
     break;
   case GameMode::UPGRADE:
   {
+    
     BuildingBody *body = data.chunks->get_tile(p.x, p.y).building;
     if (body)
     {
+      
       if (body->base->props.bool_is(PropertyBool::UNREMOVABLE))
         break;
       
@@ -1484,12 +1740,16 @@ void WindowGameplay::mouse_pressed(const sf::Vector2i &mousePos)
       if (suggestion.count(pos))
       {
         suggestion.erase(pos);
+        
         gui_hide_upgrade_info();
+        
       }
       else
       {
+        
         suggestion.insert(pos);
         gui_show_upgrade_info(body->base);
+        
       }
     }
   }
@@ -1518,6 +1778,27 @@ void WindowGameplay::mouse_zoom_dragged(const sf::Vector2i &mousePos,
       dif; // vec_90_rotate(dif, gridDraw.rotation);
 }
 
+// Written by Claude 5
+void WindowGameplay::evict_overlapping_suggestions(
+    const sf::Vector2i &pos,
+    const IVec &size)
+{
+  auto &selection = selectCtx.suggestionBuilds;
+  for (auto sItr = selection.begin(); sItr != selection.end();)
+  {
+    const auto &existing = *sItr;
+    bool overlap =
+        pos.x < existing.x + size.x &&
+        existing.x < pos.x + size.x &&
+        pos.y < existing.y + size.y &&
+        existing.y < pos.y + size.y;
+    if (overlap)
+      sItr = selection.erase(sItr);
+    else
+      ++sItr;
+  }
+}
+
 void WindowGameplay::mouse_focus_start(const sf::Vector2i &a)
 {
   this->selectCtx.preFocusBuilds = selectCtx.suggestionBuilds;
@@ -1543,17 +1824,13 @@ void WindowGameplay::mouse_focus(const sf::Vector2i &a, const sf::Vector2i &b)
     treeSize = tree.size;
   }
 
-  auto xRange = Range<>(math_min(p1.x, p2.x), math_max(p1.x, p2.x), treeSize.x);
-  auto yRange = Range<>(math_min(p1.y, p2.y), math_max(p1.y, p2.y), treeSize.y);
-  // For nicer rendering
-  xRange.reverse();
-  yRange.reverse();
+  int stepX = (p2.x >= p1.x) ? treeSize.x : -treeSize.x;
+  int stepY = (p2.y >= p1.y) ? treeSize.y : -treeSize.y;
 
-  auto axis = vec_90_rotate_axis(renderer.orientation.rotation);
-  if (axis.x == -1)
-    yRange.reverse();
-  if (axis.y == -1)
-    xRange.reverse();
+  auto xRange = Range<>(p1.x, p2.x, stepX);
+  auto yRange = Range<>(p1.y, p2.y, stepY);
+
+    
   BuildingBase *mainBuild = nullptr;
   for (auto x : xRange)
   {
@@ -1566,6 +1843,7 @@ void WindowGameplay::mouse_focus(const sf::Vector2i &a, const sf::Vector2i &b)
       switch (gameMode)
       {
       case GameMode::BUILD:
+        evict_overlapping_suggestions(pos, treeSize);
         selection.insert(sf::Vector2i{x, y});
         break;
       case GameMode::DELETE:
@@ -1631,28 +1909,45 @@ void WindowGameplay::mouse_focus_end(const sf::Vector2i &a,
 
 void WindowGameplay::keyboard_pressed(sf::Keyboard::Key key)
 {
-  if (key == sf::Keyboard::Key::H)
+
+  switch (key)
   {
+    case sf::Keyboard::Key::H:
     renderer.halfWalls = true;
+    break;
+
+    case sf::Keyboard::Key::P:
+    flags.paused ^= 1;
+    if (flags.paused)
+      data.timerManager.stop_all(data.get_time());
+    else
+      data.timerManager.resume_all(data.get_time());
+    break;
   }
+
 }
 
 void WindowGameplay::keyboard_released(sf::Keyboard::Key key)
 {
-  if (key == sf::Keyboard::Key::H)
+
+  switch (key)
   {
+    case sf::Keyboard::Key::H:
     renderer.halfWalls = false;
+    break;
   }
+
 }
 
 void WindowGameplay::on_focus()
 {
-  data.timerManager.stop_all(data.get_time());
+  if (!flags.paused)
+    data.timerManager.resume_all(data.get_time());
 }
 
 void WindowGameplay::on_unfocus()
 {
-  data.timerManager.resume_all(data.get_time());
+  data.timerManager.stop_all(data.get_time());
 }
 
 bool WindowGameplay::file_write_jsonpack(const std::wstring &fileName,
@@ -1664,9 +1959,12 @@ bool WindowGameplay::file_write_jsonpack(const std::wstring &fileName,
 
   for (auto &jsonSingle : jsonPack)
   {
-    if (jsonSingle.first == "info") {
+    if (jsonSingle.first == "info")
+    {
       jsonInfo = jsonSingle.second;
-    } else {
+    }
+    else
+    {
       jsonData[jsonSingle.first] = jsonSingle.second;
     }
   }
@@ -1692,7 +1990,7 @@ bool WindowGameplay::file_write_jsonpack(const std::wstring &fileName,
   }
   else
   {
-    fileOutData << jsonData.dump(4);
+    fileOutData << jsonData.dump();
   }
   fileOutData.close();
 
@@ -1702,8 +2000,8 @@ bool WindowGameplay::file_write_jsonpack(const std::wstring &fileName,
 
   if (!fileOutInfo || fileOutInfo.bad())
   {
-    LOG_ERROR("Could not open info file at path \"%ls\" for writing.", 
-      pathInfo.c_str());
+    LOG_ERROR("Could not open info file at path \"%ls\" for writing.",
+              pathInfo.c_str());
     return false;
   }
 
@@ -1727,55 +2025,80 @@ bool WindowGameplay::jsonpack_to_game(const t_jsonpack &jsonPack)
   this->data.clean_world();
   data.counterContext.variantFactory.list_types();
 
-  ClassIdCounter &counter = this->data.counterContext.objectIdCounter;
-
-  auto jsonToVariants = [&counter](const json &jsonFile, SerializeMap &map,
+  auto jsonToVariants = [](const json &jsonFile, SerializeMap &map,
                                    VariantFactory &variantFactory,
                                    std::string keyName)
   {
     if (jsonFile.is_null())
       return false;
 
-    if (!jsonFile.is_object())
-      return false;
-
-    // Every type of object always is in the same row
-    // Meaning a json file that stores SERIALIZABLE_ENEMY will
-    // Have only nulls up to this point.
-    for (auto itType = jsonFile.begin(); itType != jsonFile.end(); ++itType)
+      // Older pre std::transform format
+    if (jsonFile.is_object())
     {
-      size_t typeId = std::stoull(itType.key());
-      const json &jsonObjs = itType.value();
-
-      if (jsonObjs.is_null())
-        continue;
-
-      for (auto itObj = jsonObjs.begin(); itObj != jsonObjs.end(); ++itObj)
+      // Every type of object always is in the same row
+      // Meaning a json file that stores SERIALIZABLE_ENEMY will
+      // Have only nulls up to this point.
+      for (auto itType = jsonFile.begin(); itType != jsonFile.end(); ++itType)
       {
-        size_t objId = std::stoull(itObj.key());
-        const json &jsonObj = itObj.value();
+        size_t typeId = std::stoull(itType.key());
+        const json &jsonObjs = itType.value();
+
+        if (jsonObjs.is_null())
+          continue;
+
+        for (auto itObj = jsonObjs.begin(); itObj != jsonObjs.end(); ++itObj)
+        {
+          size_t objId = std::stoull(itObj.key());
+          const json &jsonObj = itObj.value();
+
+          Variant *t = variantFactory.create(map, typeId, objId);
+          assert(t);
+
+          t->from_json(jsonObj);
+        }
+      }
+
+      return true;
+    }
+    // 2. Handle Optimized Format (Flat Array)
+    else if (jsonFile.is_array())
+    {
+      for (const auto& jsonObj : jsonFile)
+      {
+        if (!jsonObj.contains("_typeId") || !jsonObj.contains("_objId")) {
+            LOG_ERROR("Save corruption: Missing _typeId or _objId in array element!");
+            continue;
+        }
+
+        size_t typeId = jsonObj["_typeId"].get<size_t>();
+        size_t objId = jsonObj["_objId"].get<size_t>();
 
         Variant *t = variantFactory.create(map, typeId, objId);
         assert(t);
 
-        counter.counterMap[typeId] =
-            std::max(counter.counterMap[typeId], objId + 1);
-
         t->from_json(jsonObj);
       }
+
+      return true;
     }
-    return true;
+
+    return false;
   };
 
   bool COMPRESSED = false;
   std::vector<json> jsons;
 
   std::string jsonFiles[] = {
-      "data", "build_bodies", "build_bases",
+      "build_bodies", "build_bases",
       "entities", "networks", "bullets"};
+  
   // Containts all serializable variants
   SerializeMap map;
   map.add(SERIALIZABLE_DATA, 0, dynamic_cast<Variant *>(&this->data));
+
+  // Code made by Claude Sonnet 5 - "data" is loaded straight into the existing GameData; the variant factory would create a second one. Old saves store null here and are skipped
+  if (jsonPack.count("data") && jsonPack.at("data").is_object())
+    data.from_json(jsonPack.at("data"));
 
   DEBUG("Loading other:");
   if (jsonPack.count("other"))
@@ -1851,18 +2174,88 @@ bool WindowGameplay::jsonpack_to_game(const t_jsonpack &jsonPack)
   return true;
 }
 
+static std::ifstream load_scenario_file(const std::wstring &name)
+{
+  std::wstring path;
+  std::ifstream fileIn;
+
+  path = L"assets/campaign/" + name + L".json";
+  fileIn = std::ifstream{std::filesystem::path(path)};
+  if (fileIn.is_open())
+  {
+    return fileIn;
+  }
+
+  path = L"saves/" + name + L".json";
+  fileIn = std::ifstream{std::filesystem::path(path)};
+  if (fileIn.is_open())
+  {
+    return fileIn;
+  }
+
+  path = name + L".json";
+  fileIn = std::ifstream{std::filesystem::path(path)};
+  if (fileIn.is_open())
+  {
+    return fileIn;
+  }
+
+  return fileIn;
+}
+
+bool WindowGameplay::load_scenario(const std::wstring &name)
+{
+  std::ifstream fileIn = load_scenario_file(name);
+  if (!fileIn.is_open())
+  {
+    LOG_ERROR("Can't open scenario \"%ls\"", name.c_str());
+    return false;
+  }
+
+  json j;
+  try
+  {
+    j = json::parse(fileIn);
+  }
+  catch (json::exception &e)
+  {
+    LOG_ERROR("Can't parse scenario \"%ls\": %s", name.c_str(), e.what());
+    return false;
+  }
+
+  t_jsonpack pack;
+  for (auto &group : j.items())
+    pack[group.key()] = group.value();
+
+  if (!jsonpack_to_game(pack))
+  {
+    LOG_ERROR("Failed to load json data");
+  }
+
+  data.timeline;
+
+  return true;
+}
+
 template <class T>
 static json &util_getter(json &file, const T &b)
 {
   return file[std::to_string(b->objectType)][std::to_string(b->objectId)];
 }
 
-#undef OLD_JSON_PACK_FROM_GAME
+#define OLD_JSON_PACK_FROM_GAME
 
 #ifdef OLD_JSON_PACK_FROM_GAME
 
 t_jsonpack WindowGameplay::jsonpack_from_game()
 {
+  LOG("=== PRE-SAVE state validation (checking live state before writing to disk) ===");
+  bool preSaveValid = data.validate_state();
+  if (preSaveValid)
+    LOG("PRE-SAVE state validation passed, live state is consistent at save time");
+  else
+    LOG_ERROR("PRE-SAVE state validation FAILED, corruption already present in live memory before this save");
+
   t_jsonpack out{};
 
   const bool COMPRESSED = false;
@@ -1914,6 +2307,8 @@ t_jsonpack WindowGameplay::jsonpack_from_game()
   // Constructions *c = data.constructions;
   // jsonData[c->objectType][c->objectId] = c->to_json();
   DEBUG("Data:");
+  // Code made by Claude Sonnet 5 - GameData is the loader's own root object, so it is stored flat instead of typeId/objId keyed like the other groups
+  jsonData = data.to_json();
   out["data"] = jsonData;
 
   DEBUG("Other:");
@@ -1962,62 +2357,80 @@ t_jsonpack WindowGameplay::jsonpack_from_game()
   json jsonNetworks = json::array();
   json jsonChunks, jsonData, jsonOther;
 
-  // --- 1. Flatten Pointers ---
-  std::vector<BuildingBody*> flatBuildBodies;
-  for (auto& b : data.bodiesContext.buildings) {
-      if (b.is_valid()) flatBuildBodies.push_back(b.get());
+  // Flatten pointers to a flat vector
+  std::vector<BuildingBody *> flatBuildBodies;
+  for (auto &b : data.bodiesContext.buildings)
+  {
+    if (b.is_valid())
+      flatBuildBodies.push_back(b.get());
   }
 
-  std::vector<BuildingBase*> flatBuildBases;
-  for (auto& b : data.bodiesContext.buildingBases) {
-      if (b) flatBuildBases.push_back(b);
+  std::vector<BuildingBase *> flatBuildBases;
+  for (auto &b : data.bodiesContext.buildingBases)
+  {
+    if (b)
+      flatBuildBases.push_back(b);
   }
 
-  std::vector<EntityBody*> flatEntities;
-  std::vector<BulletBody*> flatBullets;
-  for (auto& b : data.bodiesContext.bodies) {
-      if (!b) continue;
-      if (b->type == BodyType::ENTITY) flatEntities.push_back(dynamic_cast<EntityBody*>(b));
-      else if (b->type == BodyType::BULLET) flatBullets.push_back(dynamic_cast<BulletBody*>(b));
+  std::vector<EntityBody *> flatEntities;
+  std::vector<BulletBody *> flatBullets;
+  for (auto &b : data.bodiesContext.bodies)
+  {
+    if (!b)
+      continue;
+    if (b->type == BodyType::ENTITY)
+      flatEntities.push_back(dynamic_cast<EntityBody *>(b));
+    else if (b->type == BodyType::BULLET)
+      flatBullets.push_back(dynamic_cast<BulletBody *>(b));
   }
 
-  // --- 2. Pre-allocate Output Vectors ---
+  // Pre-allocate output json vector containers
   std::vector<json> parBuildBodies(flatBuildBodies.size());
   std::vector<json> parBuildBases(flatBuildBases.size());
   std::vector<json> parEntities(flatEntities.size());
   std::vector<json> parBullets(flatBullets.size());
 
-  // --- 3. Execute Parallel Transformations ---
-  std::transform(std::execution::par_unseq, 
-                 flatBuildBodies.begin(), flatBuildBodies.end(), 
-                 parBuildBodies.begin(), 
-                 [](BuildingBody* b) { return b->to_json(); });
+  auto serializeWithIds = [](auto* b) {
+      json j = b->to_json();
+      j["_typeId"] = b->objectType;
+      j["_objId"] = b->objectId;
+      return j;
+  };
 
-  std::transform(std::execution::par_unseq, 
-                 flatBuildBases.begin(), flatBuildBases.end(), 
-                 parBuildBases.begin(), 
-                 [](BuildingBase* b) { return b->to_json(); });
+  // Execute parallel transformations 
+  std::transform(std::execution::par_unseq,
+                 flatBuildBodies.begin(), flatBuildBodies.end(),
+                 parBuildBodies.begin(),
+                 serializeWithIds);
 
-  std::transform(std::execution::par_unseq, 
-                 flatEntities.begin(), flatEntities.end(), 
-                 parEntities.begin(), 
-                 [](EntityBody* b) { return b->to_json(); });
+  std::transform(std::execution::par_unseq,
+                 flatBuildBases.begin(), flatBuildBases.end(),
+                 parBuildBases.begin(),
+                 serializeWithIds);
 
-  std::transform(std::execution::par_unseq, 
-                 flatBullets.begin(), flatBullets.end(), 
-                 parBullets.begin(), 
-                 [](BulletBody* b) { return b->to_json(); });
+  std::transform(std::execution::par_unseq,
+                 flatEntities.begin(), flatEntities.end(),
+                 parEntities.begin(),
+                 serializeWithIds);
 
-  // --- 4. Assign Results ---
+  std::transform(std::execution::par_unseq,
+                 flatBullets.begin(), flatBullets.end(),
+                 parBullets.begin(),
+                 serializeWithIds);
+
+  // Assign results
   out["build_bodies"] = parBuildBodies;
   out["build_bases"] = parBuildBases;
   out["entities"] = parEntities;
   out["bullets"] = parBullets;
 
-  // ... Existing sequential code for networks, chunks, constructions, and info ...
+  for (auto &n : data.resourceContext.networks) {
+    json j = n->to_json();
+    j["_typeId"] = n->objectType;
+    j["_objId"] = n->objectId;
+    jsonNetworks.push_back(j);
+  }
   
-  for (auto &n : data.resourceContext.networks)
-    jsonNetworks.push_back(n->to_json());
   out["networks"] = jsonNetworks;
 
   jsonChunks[std::to_string(chunks.objectType)][std::to_string(chunks.objectId)] = chunks.to_json();
@@ -2049,7 +2462,6 @@ t_jsonpack WindowGameplay::jsonpack_from_game()
   return out;
 }
 #endif
-
 
 void WindowGameplay::popup_confirmation_window(PopupConfirmationData *data)
 {
@@ -2107,6 +2519,22 @@ void WindowGameplay::gui_init_resource_tab()
     data.ptr->setText("Test");
     gui.add(data.ptr);
   }
+
+  // Code made by Claude Sonnet 5 - same overlay pattern as the resource
+  // labels above, drawn larger via textScale since it's a headline widget
+  labelTimelineCurrent = FastLabel::create();
+  labelTimelineCurrent->setCharSpriteSheet(&guiCtx.charSpriteSheet);
+  labelTimelineCurrent->renderWindow = window;
+  labelTimelineCurrent->set(get_widget<tgui::Label>("LabelTimelineCurrent"));
+  labelTimelineCurrent->setTextScale(1.4f);
+  gui.add(labelTimelineCurrent);
+
+  labelTimelineNext = FastLabel::create();
+  labelTimelineNext->setCharSpriteSheet(&guiCtx.charSpriteSheet);
+  labelTimelineNext->renderWindow = window;
+  labelTimelineNext->set(get_widget<tgui::Label>("LabelTimelineNext"));
+  labelTimelineNext->setTextScale(1.1f);
+  gui.add(labelTimelineNext);
 }
 
 void WindowGameplay::gui_update_resources_tab(UiResources resources,
@@ -2180,9 +2608,20 @@ bool WindowGameplay::gui_disable_group(const std::string &groupName)
   return true;
 }
 
+bool WindowGameplay::gui_hide_window(const std::string &windowName)
+{
+  tgui::ChildWindow::Ptr window;
+  window = get_widget<tgui::ChildWindow>(windowName);
+
+  if (!window)
+    return false;
+  
+  window->setVisible(false);
+  return true;
+}
+
 bool WindowGameplay::gui_update_upgrade_info(UpgradeTree *info,
                                              BuildingBase *build)
-
 {
   tgui::ChildWindow::Ptr newWindow;
   newWindow = get_widget<tgui::ChildWindow>("WindowUpgrade");
@@ -2194,15 +2633,53 @@ bool WindowGameplay::gui_update_upgrade_info(UpgradeTree *info,
       ->setText("Cost: " + (info->build.empty()
                                 ? data.resources_to_str(info->build)
                                 : "None"));
-
   // Layout stuff
 
   tgui::VerticalLayout::Ptr layout;
   layout = get_widget<tgui::VerticalLayout>(newWindow, "LayoutUpgradeInfo");
-
   layout->removeAllWidgets();
-
-  if (info->spriteHolders.size())
+  DEBUG("build->hasSpriteLayout == %d", build->hasSpriteLayout);
+  if (build->hasSpriteLayout)
+  {
+    
+    // Get the 
+    int previewFrame = build->get_sprite_frame_index(info->upgradeId);
+    DEBUG("previewFrame == %d", previewFrame);
+    
+    auto itr = build->sprites.find(sf::Vector2i{0, 0});
+    t_sprite holder = (itr != build->sprites.end()) ? itr->second : -1;
+    
+    sf::Sprite *sprite = nullptr;
+    if (holder != -1)
+      sprite = assets.get_sprite(holder)->get((size_t)previewFrame);
+    
+    DEBUG("holder == %d", holder);
+    
+    if (sprite)
+    {
+      // Use getTextureRect() to get the sprite coordinates on the sheet
+      sf::IntRect ir = sprite->getTextureRect();
+      tgui::UIntRect rect = {(unsigned)ir.position.x, (unsigned)ir.position.y,
+                             (unsigned)ir.size.x, (unsigned)ir.size.y};
+        
+      tgui::Texture tex;
+      sf::Image image = sprite->getTexture().copyToImage();
+      tex.loadFromPixelData({image.getSize().x, image.getSize().y}, image.getPixelsPtr(), rect);
+        
+      DEBUG("%d %d %d %d %d %d", 
+        image.getSize().x, image.getSize().y, 
+        rect.getPosition().x, rect.getPosition().y,
+        rect.getSize().x, rect.getSize().y);
+      
+        
+      get_widget<tgui::Picture>(newWindow, "PictureUpgradeWindow")
+          ->getRenderer()
+          ->setTexture(tex);
+          
+    }
+    
+  }
+  else if (info->spriteHolders.size())
   {
     IVec start, end;
     upgrade_building_get_frames(build, info, start, end);
@@ -2212,7 +2689,7 @@ bool WindowGameplay::gui_update_upgrade_info(UpgradeTree *info,
     {
       sf::Sprite *sprite = assets.get_sprite(s)->get(0);
 
-      // Use getTextureRect() to get the actual sprite coordinates on the sheet
+      // Use getTextureRect() to get the sprite coordinates on the sheet
       sf::IntRect ir = sprite->getTextureRect();
       tgui::UIntRect rect = {(unsigned)ir.position.x, (unsigned)ir.position.y,
                              (unsigned)ir.size.x, (unsigned)ir.size.y};
@@ -2328,15 +2805,13 @@ bool WindowGameplay::gui_show_upgrade_info()
 }
 
 bool WindowGameplay::gui_show_upgrade_info(BuildingBase *build)
-
 {
   this->selectCtx.buildUpgradeSelected = build;
-
   tgui::ChildWindow::Ptr window;
+
   window = get_widget<tgui::ChildWindow>("WindowUpgrade");
-
   window->setVisible(true);
-
+  
   selectCtx.upgradeTree = build->get_upgrades();
   if (selectCtx.upgradeTree.size())
   {
@@ -2345,19 +2820,21 @@ bool WindowGameplay::gui_show_upgrade_info(BuildingBase *build)
   }
   else
   {
+    
     tgui::ChildWindow::Ptr newWindow;
     newWindow = get_widget<tgui::ChildWindow>("WindowUpgrade");
     tgui::VerticalLayout::Ptr layout;
     layout = get_widget<tgui::VerticalLayout>(newWindow, "LayoutUpgradeInfo");
-
+    
     layout->removeAllWidgets();
-
+    
     tgui::Label::Ptr label = tgui::Label::create();
     label->setText("No upgrades available");
     layout->add(label);
-
+    
     get_widget<tgui::Label>(newWindow, "LabelUpgradeTitle")
         ->setText(build->get_format_name());
+    
   }
 
   auto btnPrev = get_widget<tgui::Button>("ButtonUpgradePrev");
@@ -2949,9 +3426,46 @@ void WindowGameplay::show_entity_info(EntityBody *entity, bool update)
     layout->add(lbl);
   };
 
-  addLabel("HP: " + std::to_string(entity->hp));
-  addLabel("Attack: " + std::to_string(entity->attack));
-  addLabel("Speed: " + std::to_string(entity->maxSpeed).substr(0, 4));
+  addLabel("HP: " + std::to_string(entity->get_hp()));
+  // Code made by Claude Sonnet 5 - show effective values (baseline + aura deltas), and only list the optional stats when they are active
+  using EP = EntityPropertyNums;
+  const auto fmt = [](double v)
+  {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2) << v;
+    return ss.str();
+  };
+  const auto pct = [](double v)
+  {
+    return std::to_string((int)std::round(v * 100.0)) + "%";
+  };
+
+  double attack = entity->get_num(EP::ATTACK);
+  if (entity->isBerserk)
+    attack *= BERSERK_ATTACK_MULTIPLIER;
+  addLabel("Attack: " + std::to_string((int)attack));
+
+  double speedBase = entity->get_base(EP::SPEED_MULTIPLIER) * entity->maxSpeed;
+  double speedNow = entity->get_num(EP::SPEED_MULTIPLIER) * entity->maxSpeed;
+  std::string speedStr = "Speed: " + fmt(speedNow);
+  if (std::abs(speedNow - speedBase) > 1e-6)
+    speedStr += std::string(" (") + (speedNow > speedBase ? "+" : "") + fmt(speedNow - speedBase) + ")";
+  addLabel(speedStr);
+
+  if (entity->get_num(EP::EVADE_CHANCE) > 0.0)
+    addLabel("Evade: " + pct(entity->get_num(EP::EVADE_CHANCE)));
+  if (entity->get_num(EP::DOUBLE_ATTACK_CHANCE) > 0.0)
+    addLabel("Double attack: " + pct(entity->get_num(EP::DOUBLE_ATTACK_CHANCE)));
+  if (entity->get_num(EP::KNOCKBACK_FORCE) > 0.0)
+    addLabel("Knockback: " + fmt(entity->get_num(EP::KNOCKBACK_FORCE)));
+
+  int berserkThreshold = (int)entity->get_num(EP::BERSERK_KILL_THRESHOLD);
+  if (entity->killCount > 0 || berserkThreshold > 0)
+    addLabel("Kills: " + std::to_string(entity->killCount));
+  if (entity->isBerserk)
+    addLabel("BERSERK");
+  else if (berserkThreshold > 0)
+    addLabel("Berserk in: " + std::to_string(std::max(0, berserkThreshold - entity->killCount)) + " kills");
 
   layout->add(makeLine());
 
@@ -3027,15 +3541,16 @@ void WindowGameplay::grid_change_confirmation(IVec latest)
   {
     if (selectCtx.buildSelected.empty())
       break;
+
     UpgradeTree *tree;
     tree = dynamic_cast<UpgradeTree *>(selectCtx.buildSelected[0]);
     assert(tree);
     Resources costRes = tree->build;
     costRes = costRes * selectCtx.suggestionBuilds.size();
-    std::string costStr =
-        (costRes.empty()
-             ? "Free"
-             : costRes.to_string_weights(data.resourceContext.weights));
+
+    std::string costStr;
+    if (!costRes.empty())
+      costStr = costRes.to_string_weights(data.resourceContext.weights);
   }
   break;
 
@@ -3114,17 +3629,30 @@ void WindowGameplay::upgrade_building(BuildingBase *build, UpgradeTree *step)
   assert(build);
   assert(step);
 
+  
+
   // Upgrade the building
   build->load_upgrade_step(step);
+
+  
+
+  if (build->hasSpriteLayout)
+		return;
 
   // Get the upgrade tree's leafs
   std::vector<UpgradeTree *> steps =
       recursive_get_last_layer_tree(build->tree, build->upgrades);
 
+  
+
   IVec start, end;
   upgrade_building_get_frames(build, step, start, end);
 
+  
+
   auto &info = *build->tree;
+
+  
 
   IVec frameCount;
   frameCount = assets.get_texture_from_name(info.image).frameCount;
@@ -3139,6 +3667,8 @@ void WindowGameplay::upgrade_building(BuildingBase *build, UpgradeTree *step)
 
   build->sprites[sf::Vector2i{0, 0}] = mainSprite;
   // build->update_sprites(renderer.orientation.rotation);
+
+  
 
   // todo
   WARNING("upgrade texture unimplemented");

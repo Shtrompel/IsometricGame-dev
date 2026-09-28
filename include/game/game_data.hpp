@@ -6,13 +6,14 @@
 #define GAME_TREE_ASSERTS
 
 #include "utils/globals.hpp"
+#include "utils/class/logger.hpp"
 #include "utils/container/quad_tree.hpp"
 #include "game_buildings.hpp"
 #include "game_entity.hpp"
 #include "game_grid.hpp"
 #include "game_bullet.hpp"
 
-#include "game/scenario/Timeline.hpp"
+#include "game/scenario/timeline.hpp"
 
 #include <cfloat>
 #include <tuple>
@@ -69,13 +70,37 @@ static bool debug_home_check_entities(BuildingBase *home)
 		if (entity->entityType != EntityType::CITIZEN)
 			continue;
 		EntityCitizen *citizen = (EntityCitizen *)entity;
-		if (citizen->home != home)
+
+		// "entities" is shared between the home and workplace roles, so a
+		// citizen belongs here if EITHER relationship points to this building.
+		if (citizen->home != home && citizen->workplace != home)
 		{
+			fprintf(stderr, "debug_home_check_entities: home %p (%s) entities[%zu] citizen id=%zu "
+				  "workplace=%p citizen->home=%p (expected %p) dead=%d visible=%d\n",
+				  (void*)home, home->name, i, citizen->objectId,
+				  (void*)citizen->workplace.get(), (void*)citizen->home.get(), (void*)home,
+				  (int)citizen->dead, (int)citizen->visible);
+			fflush(stderr);
 			return false;
 		}
 	}
 	return true;
 }
+
+struct EnvironmentSettings
+{
+	sf::Vector3f ambientLight;
+	sf::Vector3f sunLight;
+	sf::Vector3f sunIntensity;
+	sf::Vector3f lightDirection;
+};
+
+struct ScenariConfig
+{
+	EnvironmentSettings settings;
+	Timeline timeline;
+	
+};
 
 /**
  * To avoid buildings adding entities by themselfs,
@@ -239,6 +264,12 @@ struct CounterContext
 	// When an object is added it needs to have an unique id higher then the last added object
 	// This map tracks the highest id number of each variant object type
 	ClassIdCounter objectIdCounter{&variantFactory};
+
+	// Used to track progress on mission events
+	std::map<IdPair, long> deathCounts;
+    std::map<IdPair, long> creationCounts;
+    std::map<int, long> resourceGained;
+
 };
 
 struct ResourceContext
@@ -317,7 +348,7 @@ struct GameData : public Variant
 
 	void serialize_initialize(const SerializeMap &map) override;
 
-	std::list<t_idwtree> get_trees(GameBody *body);
+	std::list<t_idwtree> get_trees(const GameBody *body);
 
 	t_tiletree *get_tree(
 		const t_group group,
@@ -363,7 +394,7 @@ struct GameData : public Variant
 
 	static float bodies_distance(GameBody *a, GameBody *b);
 
-	static void damage_body(GameBody *a, float damage);
+	static void damage_body(GameBody *a, float damage, EntityBody *attacker = nullptr);
 
 	bool body_is_collision(const sf::Vector2f &, const sf::Vector2f &size, sf::Vector2i *tilePosPtr = nullptr);
 
@@ -448,6 +479,13 @@ struct GameData : public Variant
 
 	bool is_barrier(const sf::Vector2i &pos);
 
+	// Code made by Claude Sonnet 5 - lets a scenario timeline (or anything
+	// else external) find a building to control without the save system's
+	// SerializeMap link-resolution, which only works within one save pack.
+	// Tries portalId first, falls back to spawnOrigin if not found
+	BuildingBase *find_building_by_id(t_id id) const;
+	BuildingBase *find_building_by_pos(const IVec &pos) const;
+
 	// Entity
 
 	bool get_free_neighbor(sf::Vector2f &outPos, const FVec &pos);
@@ -518,6 +556,21 @@ struct GameData : public Variant
 	void show_entity(EntityBody *);
 
 	void hide_entity(EntityBody *);
+
+	void record_death(const GameBody* body);
+    void record_creation(const GameBody* type);
+    void record_resource_gain(int resourceId, int amount);
+
+	// Code made by Claude Sonnet 5 - Resources::transfer mutates "to" in
+	// place and only returns success/failure, not how much actually moved
+	// (a transfer can be partially capped by storage/weight limits), so
+	// callers snapshot the destination before the transfer and pass both
+	// snapshots here; only the per-resource increase is credited
+	void record_resource_gain_delta(const Resources &before, const Resources &after);
+
+    long get_deaths(const IdPair &type) const;
+    long get_creations(const IdPair &type) const;
+    long get_resource_gained(int resourceId) const;
 
 	// Nearest Neighrbor
 
@@ -614,6 +667,19 @@ struct GameData : public Variant
 		return ret;
 	}
 
+	template <class Condition = t_def_addition>
+	void damage_bodies_radius(
+		const sf::Vector2f &pos,
+		float radius,
+		float damage,
+		Condition &&additionCondition = DEFAULT_ADDITION())
+	{
+		auto bodies = nearest_bodies_radius<GameBody>(
+			pos, radius, SIZE_MAX, additionCondition);
+		for (GameBody *body : bodies)
+			damage_body(body, damage);
+	}
+
 	// Entity
 
 	std::list<EntityBody *>
@@ -645,7 +711,7 @@ struct GameData : public Variant
 
 	template <
 		class Condition = t_def_condition>
-	std::list<BuildingBody *>
+	std::list<GameBody *>
 	nearest_bodies_quad(
 		const sf::Vector2f &pos,
 		size_t limit = t_tiletree::MAX_SIZE,
@@ -661,10 +727,53 @@ struct GameData : public Variant
 	}
 
 	template <
+		class Condition = t_def_condition>
+	std::list<BuildingBody *>
+	nearest_buildings_quad(
+		const sf::Vector2f &pos,
+		size_t limit = t_tiletree::MAX_SIZE,
+		t_idpair treeId = {ENUM_BODY_TYPE, (t_id)BodyType::BUILDING},
+		const Condition &condition = DEFAULT_CONDITION())
+	{
+		return nearest_buildings_quad(
+			pos,
+			limit,
+			treeId,
+			condition,
+			DEFAULT_COMPARATOR(pos));
+	}
+
+	template <
+		class Condition = t_def_condition,
+		class Comparator = t_def_comparator>
+	std::list<GameBody *>
+	nearest_bodies_quad(
+		const sf::Vector2f &pos,
+		size_t limit,
+		t_idpair treeId,
+		const Condition &condition,
+		const Comparator &comparator)
+	{
+		std::list<GameBody *> ret;
+		auto insertor = std::back_inserter(ret);
+
+		t_tiletree *tree = get_tree(treeId.group, treeId.id);
+
+		tree->nearest_k_insertor<decltype(insertor), GameBody *>(
+			vec_pos_to_tile(pos),
+			limit,
+			insertor,
+			condition,
+			comparator);
+
+		return ret;
+	}
+
+	template <
 		class Condition = t_def_condition,
 		class Comparator = t_def_comparator>
 	std::list<BuildingBody *>
-	nearest_bodies_quad(
+	nearest_buildings_quad(
 		const sf::Vector2f &pos,
 		size_t limit,
 		t_idpair treeId,
@@ -719,7 +828,7 @@ struct GameData : public Variant
 		return (float)constNumeric[(size_t)x];
 	}
 
-	std::list<BuildingBody *>
+	std::list<GameBody *>
 	nearest_bodies_quad(const sf::Vector2f &pos, size_t limit = -1);
 
 public:

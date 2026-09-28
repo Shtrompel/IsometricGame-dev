@@ -45,7 +45,6 @@ void main()
             float t = (float(s) + jitter) / float(STEPS);
             vec2 samplePos = fragPos + dir * t;
             vec2 sampleUv = samplePos / resolution;
-            sampleUv.y = 1.0 - sampleUv.y;
 
             if (sampleUv.x < 0.0 || sampleUv.x > 1.0 ||
                 sampleUv.y < 0.0 || sampleUv.y > 1.0)

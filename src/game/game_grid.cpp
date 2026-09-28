@@ -223,12 +223,35 @@ static void to_json(json &j, const Grid &vr)
 		}
 #endif // defined(DEEP_SERIALIZE_GRID)
 
+/*
 		Tile *t = v->grid;
 		for (int i = 0; i < v->cx * v->cy; ++i, ++t)
 		{
 			if (t)
 				j["t"][i] = *t;
 		}
+*/
+
+		// Seriaize JSON code as list of chunks
+		size_t gridCount = v->cx * v->cy;
+		std::vector<uint64_t> tileCodes(gridCount, 0);
+		
+		Tile *t = v->grid;
+		for (size_t i = 0; i < gridCount; ++i, ++t)
+		{
+			Tile& t = v->grid[i];
+
+			uint64_t code = 0u;
+			size_t follower = 0;
+			code = code_write(follower, code, t.visible);
+			code = code_write(follower, code, t.active);
+			code = code_write(follower, code, t.speedBonus);
+			code = code_write(follower, code, t.attackBonud);
+			code = code_write(follower, code, t.bodyBonus);
+			tileCodes[i] = code;
+		}
+		
+		j["t_codes"] = tileCodes;
 	}
 	catch (const std::exception &e)
 	{
@@ -259,11 +282,41 @@ static void from_json(const json &j, Grid &v)
 		v.setEnemies.clear();
 #endif // defined(DEEP_SERIALIZE_GRID)
 
+		/*
 		size_t gridCount = v.cx * v.cy;
 		v.grid = new Tile[gridCount];
 		for (size_t i = 0; i < gridCount; ++i)
 		{
 			j.at("t").at(i).get_to(v.grid[i]);
+		}
+		*/
+
+		size_t gridCount = v.cx * v.cy;
+		v.grid = new Tile[gridCount];
+
+		if (j.contains("t_codes"))
+		{
+			std::vector<uint64_t> tileCodes;
+			j.at("t_codes").get_to(tileCodes);
+
+			for (size_t i = 0; i < gridCount; ++i)
+			{
+				Tile &t = v.grid[i];
+				uint64_t code = tileCodes[i];
+				size_t follower = 0;
+
+				t.visible = code_read_bool(follower, code);
+				t.active = code_read_bool(follower, code);
+				t.speedBonus = code_read_uint8(follower, code);
+				t.attackBonud = code_read_uint8(follower, code);
+				t.bodyBonus = code_read_uint8(follower, code);
+
+				// Mathematically reconstruct the sf::Vector2i positions
+				t.tilePos.x = i % v.cx + v.cx * v.idx;
+				t.tilePos.y = i / v.cx + v.cy * v.idy;
+				t.building = nullptr;
+				t.entities.clear();
+			}
 		}
 	}
 	catch (json::exception &e)

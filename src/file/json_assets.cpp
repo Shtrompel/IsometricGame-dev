@@ -216,9 +216,7 @@ sprite_info_to_id(
 	if (!strcmp(img, ""))
 		return ret;
 
-	// todo remove
-	bool tmpExc = !strcmp(img, "graveyard");
-	if (size == sf::Vector2i{ 1, 1 } || tmpExc)
+	if (size == sf::Vector2i{ 1, 1 })
 	{
 		int mainSprite = assets.load_sprites(
 			img,
@@ -301,7 +299,7 @@ sprite_repr_to_info(
 	strSource = str_trim(strSource);
 	size_t follower = 0;
 	auto v = str_split(strSource, " ");
-	if (v.size() > 1 && str_is_alpha(v[0]))
+	if (v.size() > 1 && v[0].find(',') == std::string::npos)
 		strImage = v[follower++];
 
 	std::string frames = iterator_to_string_linear(
@@ -338,6 +336,172 @@ sprite_repr_to_info(
 	return ret;
 }
 
+/*
+static t_spriteaxis sprite_axis_from_name(const std::string& raw)
+{
+    std::string s = format_json_keyname(raw);
+    if (s == "ANIM") 
+		return SPRITE_LAYOUT_ANIM;
+    if (s == "FULLNESS") 
+		return SPRITE_LAYOUT_FULLNESS;
+    if (s == "OCCUPANT") 
+		return SPRITE_LAYOUT_OCCUPENT;
+	
+	// Check if formatted like UPGRADEx where x is a non negative integer
+	const char* COMPARE_STR = "UPGRADE";
+	int xVal = 0;
+	int i = 0;
+	for (i = 0; i < raw.size(); ++i)
+	{
+		if (i < 8)
+		{
+			if (COMPARE_STR[i] == raw[i])
+				continue;
+			
+			xVal = -1;
+			break;
+		}
+
+		if (isdigit(raw[i]))
+		{
+			xVal *= 10;
+			xVal += (int)(raw[i] - '0');
+			continue;
+		}
+
+		xVal = -1;
+		break;
+	}
+
+	if (xVal != -1)
+	{
+		return SPRITE_LAYOUT_UPGRADE0 + xVal;
+	}
+
+    return -1;
+}
+*/
+// Maps the axis names used in buildings.json's "sprite_axes_x"/"sprite_axes_y"
+// strings to the SPRITE_LAYOUT_* constants.
+static bool sprite_axis_from_str(const std::string& str0, t_spriteaxis& out)
+{
+	std::string str = format_json_keyname(str0);
+	if (str == "ANIM") { out = SPRITE_LAYOUT_ANIM; return true; }
+	if (str == "FULLNESS") { out = SPRITE_LAYOUT_FULLNESS; return true; }
+	if (str == "OCCUPENT") { out = SPRITE_LAYOUT_OCCUPENT; return true; }
+	if (str == "UPGRADE0") { out = SPRITE_LAYOUT_UPGRADE0; return true; }
+	if (str == "UPGRADE1") { out = SPRITE_LAYOUT_UPGRADE1; return true; }
+	if (str == "UPGRADE2") { out = SPRITE_LAYOUT_UPGRADE2; return true; }
+	WARNING("Unknown sprite axis name \"%s\"", str0.c_str());
+	return false;
+}
+
+/**
+ * Parses a "{AXIS:size, AXIS2:size2}" string - same brace-list convention
+ * as "uses"/"properties"/"nums"/"bools" elsewhere in this file - into an
+ * ordered axis list plus each axis' size. Order matters: the first entry
+ * is the fastest-varying (stride 1) axis along that dimension, matching
+ * SpriteSheetSystem::calculate_strides. The product of the sizes listed
+ * becomes that dimension's grid size.
+ */
+static bool parse_sprite_axes_str(
+	const std::string& strIn,
+	std::vector<t_spriteaxis>& axesOut,
+	std::unordered_map<t_spriteaxis, int>& sizesOut,
+	int& gridSizeOut)
+{
+	gridSizeOut = 1;
+
+	if (strIn.empty())
+		return true;
+
+	std::string str = str_trim(strIn);
+	if (str.front() == '{' && str.back() == '}')
+		str = str.substr(1, str.size() - 2);
+
+	if (str.empty() || str_lowercase(str) == STR_LOWER_NONE)
+		return true;
+
+	auto entries = str_split(str, ",");
+	for (auto& entry : entries)
+	{
+		auto strs = str_split(entry, ":");
+		if (strs.size() != 2)
+		{
+			LOG_ERROR(
+				"Bad sprite axis \"%s\" formatting, there should be only one colon.",
+				entry.c_str());
+			return false;
+		}
+
+		t_spriteaxis axis;
+		if (!sprite_axis_from_str(str_trim(strs[0]), axis))
+			return false;
+
+		int size;
+		try
+		{
+			size = std::stoi(str_trim(strs[1]));
+		}
+		catch (const std::invalid_argument&)
+		{
+			LOG_ERROR("Bad sprite axis size in \"%s\"", entry.c_str());
+			return false;
+		}
+
+		axesOut.push_back(axis);
+		sizesOut[axis] = size;
+		gridSizeOut *= size;
+
+		DEBUG("[SPRITE] parsed axis %d size %d (running grid size %d)",
+			(int)axis, size, gridSizeOut);
+	}
+
+	return true;
+}
+
+/**
+ * Parses the optional "sprite_axes_x" / "sprite_axes_y" strings, e.g.:
+ * "sprite_axes_x": "{UPGRADE1:3}",
+ * "sprite_axes_y": "{UPGRADE0:3}"
+ * into a SpriteSheetSystem. Grid width/height are derived as the product
+ * of the axis sizes listed in each string, so the sheet dimensions always
+ * match the declared axes - no separate grid_width/grid_height needed.
+ */
+static bool load_sprite_layout(
+	const nlohmann::json& jsonBuilding,
+	SpriteSheetSystem& layoutOut)
+{
+	if (!jsonBuilding.contains("sprite_axes_x") &&
+		!jsonBuilding.contains("sprite_axes_y"))
+		return false;
+
+	std::vector<t_spriteaxis> xAxes, yAxes;
+	std::unordered_map<t_spriteaxis, int> axisSizes;
+	int gridWidth = 1, gridHeight = 1;
+
+	if (jsonBuilding.contains("sprite_axes_x") &&
+		!parse_sprite_axes_str(
+			jsonBuilding["sprite_axes_x"].get<std::string>(),
+			xAxes, axisSizes, gridWidth))
+		return false;
+
+	if (jsonBuilding.contains("sprite_axes_y") &&
+		!parse_sprite_axes_str(
+			jsonBuilding["sprite_axes_y"].get<std::string>(),
+			yAxes, axisSizes, gridHeight))
+		return false;
+
+	if (xAxes.empty() && yAxes.empty())
+		return false;
+
+	layoutOut = SpriteSheetSystem(xAxes, yAxes, axisSizes, gridWidth, gridHeight);
+	
+	DEBUG("[SPRITE] load_sprite_layout: grid %dx%d, xAxes=%zu yAxes=%zu",
+		gridWidth, gridHeight, xAxes.size(), yAxes.size());
+
+	return true;
+}
 
 static std::unordered_map<IVec, t_sprite>
 sprite_repr_to_info_entity(
@@ -734,6 +898,9 @@ static EntityStats process_entity_stat(
 	if (jStat.count("aggressive"))
 		stats.aggressive = jStat.value("aggressive", false);
 
+	if (jStat.count("is_light_source"))
+		stats.isLightSource = jStat.value("is_light_source", false);
+
 	std::string img = jStat.value("image", "entity");
 	if (jStat.count("frames_walk"))
 		sprite_repr_to_info(
@@ -905,6 +1072,8 @@ BulletStats process_bullets_stat(
 		stats.maxDist = jStat.value("max_dist", 0.0f);
 	if (jStat.count("radius"))
 		stats.radius = jStat.value("radius", 0.0f);
+	if (jStat.count("is_light_source"))
+		stats.isLightSource = jStat.value("is_light_source", false);
 
 	sprite_repr_to_info(
 		&stats.sprite,
@@ -1022,6 +1191,8 @@ static bool process_building_stats(
 		SET_NUM(jsonBuilding, info.delayCost, "delay_cost");
 		SET_NUM(jsonBuilding, info.delayAction, "delay_action");
 
+		SET_IVEC(jsonBuilding, info.size, "build_size");
+
 		if (jsonBuilding.count("image_frames"))
 		{
 			info.spriteHolders = sprite_repr_to_info(
@@ -1035,19 +1206,8 @@ static bool process_building_stats(
 				info.size);
 		}
 
-		if (jsonBuilding.count("image_unfunctional"))
-		{
-			info.spriteUHolders = sprite_repr_to_info(
-				nullptr,
-				&info.framesUStart,
-				&info.framesUEnd,
-				info.image,
-				assets,
-				std::string(info.image),
-				jsonBuilding["image_unfunctional"].get<std::string>(),
-				info.size);
-		}
- 
+		info.hasSpriteLayout = load_sprite_layout(jsonBuilding, info.spriteLayout);
+
 		std::string jobStr;
 		if (jsonBuilding.contains("job"))
 		{
@@ -1085,6 +1245,8 @@ static bool process_building_stats(
 		SET_INT(jsonBuilding, info.weightCap, "weight_cap");
 		SET_INT(jsonBuilding, info.entityLimit, "entity_limit");
 		SET_NUM(jsonBuilding, info.effectRadius, "radius_effect");
+		if (jsonBuilding.contains("is_light_source"))
+			info.isLightSource = jsonBuilding.value("is_light_source", false);
 
 		SET_INT(jsonBuilding, info.buildWork, "build_work");
 
@@ -1117,6 +1279,7 @@ static bool process_building_stats(
 
 	std::string propsBoolsStr = "";
 	std::string propsNumStr = "";
+	std::string propsBoolsRemoveStr = "";
 	if (jsonBuilding.contains("uses"))
 	{
 		try
@@ -1141,6 +1304,18 @@ static bool process_building_stats(
 			return false;
 		}
 	}
+	if (jsonBuilding.contains("uses_remove"))
+	{
+		try
+		{
+			propsBoolsRemoveStr = jsonBuilding.at("uses_remove").get<std::string>();
+		}
+		catch (nlohmann::detail::type_error &e)
+		{
+			WARNING("data.json parsing error %s", e.what());
+			return false;
+		}
+	}
 
 	if (typePair != IDPAIR_NONE)
 	{
@@ -1155,6 +1330,14 @@ static bool process_building_stats(
 		ENUM_PROPERTY_NUM,
 		propsBoolsStr,
 		propsNumStr);
+	
+	decode_props(
+		info.propsRemove,
+		enumTree,
+		ENUM_PROPERTY_BOOL,
+		ENUM_PROPERTY_NUM,
+		propsBoolsRemoveStr,
+		"");
 
 	if (info.powerIn || info.powerOut || info.powerStore)
 		info.props.bool_set(PropertyBool::POWER_NETWORK, true);
